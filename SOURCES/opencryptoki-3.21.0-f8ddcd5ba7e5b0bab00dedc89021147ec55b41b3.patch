@@ -1,0 +1,37 @@
+commit f8ddcd5ba7e5b0bab00dedc89021147ec55b41b3
+Author: Ingo Franzki <ifranzki@linux.ibm.com>
+Date:   Tue May 23 15:07:02 2023 +0200
+
+    p11sak: Fix segfault in PEM_write_bio() on OpenSSL 1.1.1
+    
+    On OpenSSL version before 1.1.1r function PEM_write_bio() segfaults when the
+    'header' argument is NULL. This was fixed in OpenSSL 1.1.1r with commit
+    https://github.com/openssl/openssl/commit/3b9082c844913d3a0efada9fac0bd2924ce1a8f2
+    
+    As a workaround, specify an empty string instead of NULL, which results in the
+    same output.
+    
+    Signed-off-by: Ingo Franzki <ifranzki@linux.ibm.com>
+
+diff --git a/usr/sbin/p11sak/p11sak.c b/usr/sbin/p11sak/p11sak.c
+index 5b54b538..3baae560 100644
+--- a/usr/sbin/p11sak/p11sak.c
++++ b/usr/sbin/p11sak/p11sak.c
+@@ -6794,7 +6794,7 @@ static CK_RV p11sak_export_spki(const struct p11sak_keytype *keytype,
+         return rc;
+     }
+ 
+-    ret = PEM_write_bio(bio, PEM_STRING_PUBLIC, NULL,
++    ret = PEM_write_bio(bio, PEM_STRING_PUBLIC, "",
+                         attr.pValue, attr.ulValueLen);
+     if (ret <= 0) {
+         warnx("Failed to write SPKI of %s key object \"%s\" to PEM file '%s'.",
+@@ -6888,7 +6888,7 @@ static CK_RV p11sak_export_asym_key(const struct p11sak_keytype *keytype,
+         ret = PEM_write_bio(bio, private ?
+                                     keytype->pem_name_private :
+                                     keytype->pem_name_public,
+-                            NULL, data, data_len);
++                            "", data, data_len);
+         if (ret <= 0) {
+             warnx("Failed to write %s key object \"%s\" to PEM file '%s'.",
+                   typestr, label, opt_file);

@@ -1,0 +1,27 @@
+diff -up opencryptoki-3.21.0/misc/pkcsslotd.service.in.me opencryptoki-3.21.0/misc/pkcsslotd.service.in
+--- opencryptoki-3.21.0/misc/pkcsslotd.service.in.me	2023-05-16 20:50:08.128841932 +0200
++++ opencryptoki-3.21.0/misc/pkcsslotd.service.in	2023-05-16 21:19:35.208570589 +0200
+@@ -22,17 +22,17 @@ PrivateUsers=no
+ PrivateNetwork=no
+ RestrictAddressFamilies=AF_UNIX AF_NETLINK
+ IPAddressDeny=any
+-ProtectClock=yes
++#ProtectClock=yes
+ ProtectKernelTunables=yes
+ ProtectKernelModules=yes
+-ProtectKernelLogs=yes
++#ProtectKernelLogs=yes
+ ProtectControlGroups=yes
+ ProtectHome=yes
+-ProtectHostname=yes
+-ProtectProc=default
++#ProtectHostname=yes
++#ProtectProc=default
+ ProtectSystem=strict
+-ReadWritePaths=@localstatedir@
+-ProcSubset=all
++ReadWritePaths=@localstatedir@ /run
++#ProcSubset=all
+ MemoryDenyWriteExecute=yes
+ RestrictRealtime=yes
+ RestrictNamespaces=yes
