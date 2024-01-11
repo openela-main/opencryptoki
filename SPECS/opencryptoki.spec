@@ -1,55 +1,27 @@
 Name:			opencryptoki
 Summary:		Implementation of the PKCS#11 (Cryptoki) specification v3.0
-Version:		3.19.0
-Release:		2%{?dist}
+Version:		3.21.0
+Release:		8%{?dist}
 License:		CPL
 URL:			https://github.com/opencryptoki/opencryptoki
 Source0:		https://github.com/opencryptoki/%{name}/archive/v%{version}/%{name}-%{version}.tar.gz
-# https://bugzilla.redhat.com/show_bug.cgi?id=732756
-Patch0:			opencryptoki-3.11.0-group.patch
 # bz#1373833, change tmpfiles snippets from /var/lock/* to /run/lock/*
 Patch1:			opencryptoki-3.11.0-lockdir.patch
 # add missing p11sak_defined_attrs.conf, strength.conf
-Patch2:			opencryptoki-3.18.0-p11sak.patch
+Patch2:			opencryptoki-3.21.0-p11sak.patch
+
 # upstream patches
-Patch100:		opencryptoki-3.19.0-fix-memory-leak.patch
-Patch101:		0001-EP11-Unify-key-pair-generation-functions.patch
-Patch102:		0002-EP11-Do-not-report-DSA-DH-parameter-generation-as-be.patch
-Patch103:		0003-EP11-Do-not-pass-empty-CKA_PUBLIC_KEY_INFO-to-EP11-h.patch
-Patch104:		0004-Mechtable-CKM_IBM_DILITHIUM-can-also-be-used-for-key.patch
-Patch105:		0005-EP11-Remove-DSA-DH-parameter-generation-mechanisms-f.patch
-Patch106:		0006-EP11-Pass-back-chain-code-for-CKM_IBM_BTC_DERIVE.patch
-Patch107:		0007-EP11-Supply-CKA_PUBLIC_KEY_INFO-with-CKM_IBM_BTC_DER.patch
-Patch108:		0008-EP11-Supply-CKA_PUBLIC_KEY_INFO-when-importing-priva.patch
-Patch109:		0009-EP11-Fix-memory-leak-introduced-with-recent-commit.patch
-Patch110:		0010-p11sak-Fix-segfault-when-dilithium-version-is-not-sp.patch
-Patch111:		0011-EP11-remove-dead-code-and-unused-variables.patch
-Patch112:		0012-EP11-Update-EP11-host-library-header-files.patch
-Patch113:		0013-EP11-Support-EP11-host-library-version-4.patch
-Patch114:		0014-EP11-Add-new-control-points.patch
-Patch115:		0015-EP11-Default-unknown-CPs-to-ON.patch
-Patch116:		0016-COMMON-Add-defines-for-Dilithium-round-2-and-3-varia.patch
-Patch117:		0017-COMMON-Add-defines-for-Kyber.patch
-Patch118:		0018-COMMON-Add-post-quantum-algorithm-OIDs.patch
-Patch119:		0019-COMMON-Dilithium-key-BER-encoding-decoding-allow-dif.patch
-Patch120:		0020-COMMON-EP11-Add-CKA_VALUE-holding-SPKI-PKCS-8-of-key.patch
-Patch121:		0021-COMMON-EP11-Allow-to-select-Dilithium-variant-via-mo.patch
-Patch122:		0022-EP11-Query-supported-PQC-variants-and-restrict-usage.patch
-Patch123:		0023-POLICY-Dilithium-strength-and-signature-size-depends.patch
-Patch124:		0024-TESTCASES-Test-Dilithium-variants.patch
-Patch125:		0025-COMMON-EP11-Add-Kyber-key-type-and-mechanism.patch
-Patch126:		0026-EP11-Add-support-for-generating-and-importing-Kyber-.patch
-Patch127:		0027-EP11-Add-support-for-encrypt-decrypt-and-KEM-operati.patch
-Patch128:		0028-POLICY-STATISTICS-Check-for-Kyber-KEM-KDFs-and-count.patch
-Patch129:		0029-TESTCASES-Add-tests-for-CKM_IBM_KYBER.patch
-Patch130:		0030-p11sak-Support-additional-Dilithium-variants.patch
-Patch131:		0031-p11sak-Add-support-for-IBM-Kyber-key-type.patch
-Patch132:		0032-testcase-Enhance-p11sak-testcase-to-generate-IBM-Kyb.patch
-Patch133:		0033-EP11-Supply-CKA_PUBLIC_KEY_INFO-with-CKM_IBM_BTC_DER.patch
-Patch134:		0034-EP11-Fix-setting-unknown-CPs-to-ON.patch
+# pkcsstats: Fix handling of user name
+Patch100: opencryptoki-3.21.0-f4166214552a92d8d66de8011ab11c9c2c6bb0a4.patch
+# p11sak: Fix user confirmation prompt behavior when stdin is closed
+Patch101: opencryptoki-3.21.0-4ff774568e334a719fc8de16fe2309e2070f0da8.patch
+# p11sak fails as soon as there reside non-key objects
+Patch102: opencryptoki-3.21.0-92999f344a3ad99a67a1bcfd9ad28f28c33e51bc.patch
+# opencryptoki p11sak tool: slot option does not accept argument 0 for slot index 0
+Patch103: opencryptoki-3.21.0-2ba0f41ef5e14d4b509c8854e27cf98e3ee89445.patch
 
 Requires(pre):		coreutils diffutils
-Requires: 		(selinux-policy >= 34.1.8-1 if selinux-policy-targeted)
+Requires: 		(selinux-policy >= 38.1.14-1 if selinux-policy-targeted)
 BuildRequires:		gcc
 BuildRequires:		gcc-c++
 BuildRequires:		openssl-devel >= 1.1.1
@@ -60,7 +32,7 @@ BuildRequires:		openldap-devel
 BuildRequires:		autoconf automake libtool
 BuildRequires:		bison flex
 BuildRequires:		systemd-devel
-BuildRequires:		libitm-devel
+BuildRequires:		libcap-devel
 BuildRequires:		expect
 BuildRequires:		make
 %ifarch s390 s390x
@@ -217,6 +189,7 @@ configured with Enterprise PKCS#11 (EP11) firmware.
 ./bootstrap.sh
 
 %configure --with-systemd=%{_unitdir} --enable-testcases	\
+    --with-pkcsslotd-user=pkcsslotd --with-pkcs-group=pkcs11 \
 %if 0%{?tpmtok}
     --enable-tpmtok \
 %else
@@ -245,6 +218,7 @@ fi
 
 %pre libs
 getent group pkcs11 >/dev/null || groupadd -r pkcs11
+getent passwd pkcsslotd >/dev/null || useradd -r -g pkcs11 -d /run/opencryptoki -s /sbin/nologin -c "Opencryptoki pkcsslotd user" pkcsslotd
 exit 0
 
 %post
@@ -274,7 +248,7 @@ fi
 %doc doc/README.token_data
 %doc %{_docdir}/%{name}/*.conf
 %dir %{_sysconfdir}/%{name}
-%config(noreplace) %{_sysconfdir}/%{name}/%{name}.conf
+%verify(not md5 size mtime) %config(noreplace) %{_sysconfdir}/%{name}/%{name}.conf
 %attr(0640, root, pkcs11) %config(noreplace) %{_sysconfdir}/%{name}/p11sak_defined_attrs.conf
 %attr(0640, root, pkcs11) %config(noreplace) %{_sysconfdir}/%{name}/strength.conf
 %{_tmpfilesdir}/%{name}.conf
@@ -284,10 +258,12 @@ fi
 %{_sbindir}/pkcsconf
 %{_sbindir}/pkcsslotd
 %{_sbindir}/pkcsstats
+%{_sbindir}/pkcshsm_mk_change
 %{_mandir}/man1/p11sak.1*
 %{_mandir}/man1/pkcstok_migrate.1*
 %{_mandir}/man1/pkcsconf.1*
 %{_mandir}/man1/pkcsstats.1*
+%{_mandir}/man1/pkcshsm_mk_change.1*
 %{_mandir}/man5/policy.conf.5*
 %{_mandir}/man5/strength.conf.5*
 %{_mandir}/man5/%{name}.conf.5*
@@ -297,9 +273,10 @@ fi
 %{_libdir}/opencryptoki/methods
 %{_libdir}/pkcs11/methods
 %dir %attr(770,root,pkcs11) %{_sharedstatedir}/%{name}
+%dir %attr(770,root,pkcs11) %{_sharedstatedir}/%{name}/HSM_MK_CHANGE
 %ghost %dir %attr(770,root,pkcs11) %{_rundir}/lock/%{name}
 %ghost %dir %attr(770,root,pkcs11) %{_rundir}/lock/%{name}/*
-%dir %attr(770,root,pkcs11) %{_localstatedir}/log/opencryptoki
+%dir %attr(710,pkcsslotd,pkcs11) /run/%{name}
 
 %files libs
 %license LICENSE
@@ -315,6 +292,7 @@ fi
 %{_libdir}/pkcs11/libopencryptoki.so
 %{_libdir}/pkcs11/PKCS11_API.so
 %{_libdir}/pkcs11/stdll
+%dir %attr(770,root,pkcs11) %{_localstatedir}/log/opencryptoki
 
 %files devel
 %{_includedir}/%{name}/
@@ -375,6 +353,29 @@ fi
 
 
 %changelog
+* Fri Jul 14 2023 Than Ngo <than@redhat.com> - 3.21.0-8
+- Resolves: #2222592, p11sak tool: slot option does not accept argument 0 for slot index 0
+- Resolves: #2222596, p11sak fails as soon as there reside non-key objects
+
+* Tue Jun 13 2023 Than Ngo <than@redhat.com> - 3.21.0-5
+- add requirement on selinux-policy >= 38.1.14-1 for pkcsslotd policy sandboxing
+Related: #2160061
+
+* Fri May 26 2023 Than Ngo <than@redhat.com> - 3.21.0-4
+- add verify attributes for opencryptoki.conf to ignore the verification
+
+Related: #2160061
+
+* Mon May 22 2023 Than Ngo <than@redhat.com> - 3.21.0-3
+- Resolves: #2110497, concurrent MK rotation for cca token
+- Resolves: #2110498, concurrent MK rotation for ep11 token
+- Resolves: #2110499, ep11 token: PKCS #11 3.0 - support AES_XTS
+- Resolves: #2111010, cca token: protected key support 
+- Resolves: #2160061, rebase to 3.21.0
+- Resolves: #2160105, pkcsslotd hardening
+- Resolves: #2160107, p11sak support Dilithium and Kyber keys
+- Resolves: #2160109, ica and soft tokens: PKCS #11 3.0 - support AES_XTS
+
 * Mon Jan 30 2023 Than Ngo <than@redhat.com> - 3.19.0-2
 - Resolves: #2044182, Support of ep11 token for new IBM Z Hardware (IBM z16) 
 
