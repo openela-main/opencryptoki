@@ -1,0 +1,52 @@
+commit 4ff774568e334a719fc8de16fe2309e2070f0da8
+Author: Ingo Franzki <ifranzki@linux.ibm.com>
+Date:   Mon May 22 11:40:01 2023 +0200
+
+    p11sak: Fix user confirmation prompt behavior when stdin is closed
+    
+    Treat any error during user confirmation prompt as 'cancel' and skip all
+    operations.
+    
+    One can for example close stdin during a user prompt via CTRL+D. This was
+    erroneously treated as positive confirmation and therefore caused the
+    operation to be performed on the current key object and all further objects
+    matching the filter as well, instead of canceling the operation entirely.
+    
+    Signed-off-by: Ingo Franzki <ifranzki@linux.ibm.com>
+
+diff --git a/usr/sbin/p11sak/p11sak.c b/usr/sbin/p11sak/p11sak.c
+index d75d8343..5b54b538 100644
+--- a/usr/sbin/p11sak/p11sak.c
++++ b/usr/sbin/p11sak/p11sak.c
+@@ -4736,6 +4736,7 @@ static CK_RV handle_key_remove(CK_OBJECT_HANDLE key, CK_OBJECT_CLASS class,
+             data->num_skipped++;
+             return CKR_OK;
+         case 'c':
++        case '\0':
+             data->skip_all = true;
+             data->num_skipped++;
+             return CKR_OK;
+@@ -4825,6 +4826,7 @@ static CK_RV handle_key_set_attr(CK_OBJECT_HANDLE key, CK_OBJECT_CLASS class,
+             data->num_skipped++;
+             return CKR_OK;
+         case 'c':
++        case '\0':
+             data->skip_all = true;
+             data->num_skipped++;
+             return CKR_OK;
+@@ -4974,6 +4976,7 @@ static CK_RV handle_key_copy(CK_OBJECT_HANDLE key, CK_OBJECT_CLASS class,
+             data->num_skipped++;
+             return CKR_OK;
+         case 'c':
++        case '\0':
+             data->skip_all = true;
+             data->num_skipped++;
+             return CKR_OK;
+@@ -6983,6 +6986,7 @@ static CK_RV handle_key_export(CK_OBJECT_HANDLE key, CK_OBJECT_CLASS class,
+             data->num_skipped++;
+             return CKR_OK;
+         case 'c':
++        case '\0':
+             data->skip_all = true;
+             data->num_skipped++;
+             return CKR_OK;

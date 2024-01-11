@@ -1,0 +1,34 @@
+commit 2ba0f41ef5e14d4b509c8854e27cf98e3ee89445
+Author: Ingo Franzki <ifranzki@linux.ibm.com>
+Date:   Mon Jul 10 13:22:48 2023 +0200
+
+    p11sak: Fix parsing of slot number 0
+    
+    Running command 'p11sak list-key aes --slot 0' may result in
+    'p11sak: Invalid argument '0' for option '-s/--slot''
+    
+    This is because of the error checking after strtoul() within function
+    process_number_argument(). In case errno is not zero, it treats a
+    parsed value of zero as an error.
+    
+    Under certain circumstances, errno is non-zero already before calling
+    strtoul(), and stays non-zero in case of strtoul() succeeds. This leads to
+    an incorrect error checking, and it is treated as error.
+    
+    Initialize errno to zero before calling strtoul() to avoid such false error
+    detection.
+    
+    Signed-off-by: Ingo Franzki <ifranzki@linux.ibm.com>
+
+diff --git a/usr/sbin/p11sak/p11sak.c b/usr/sbin/p11sak/p11sak.c
+index 6e11cb41..38665bbd 100644
+--- a/usr/sbin/p11sak/p11sak.c
++++ b/usr/sbin/p11sak/p11sak.c
+@@ -1712,6 +1712,7 @@ static CK_RV process_number_argument(const struct p11sak_arg *arg, char *val)
+ {
+     char *endptr;
+ 
++    errno = 0;
+     *arg->value.number = strtoul(val, &endptr, 0);
+ 
+     if ((errno == ERANGE && *arg->value.number == ULONG_MAX) ||

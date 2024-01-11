@@ -1,0 +1,84 @@
+commit f4166214552a92d8d66de8011ab11c9c2c6bb0a4
+Author: Ingo Franzki <ifranzki@linux.ibm.com>
+Date:   Mon May 22 13:31:21 2023 +0200
+
+    pkcsstats: Fix handling of user name
+    
+    The struct passwd returned by getpwuid() is a pointer to a static area, that
+    may get overwritten by subsequent calls to getpwuid() or similar.
+    Actually, C_Initialize() itself is using getpwuid() internally, and thus will
+    interfere with the getpwuid() usage in pkcsstats.
+    
+    Make a copy of the returned user name before calling C_Initialize() in
+    init_ock() to ensure to work with the desired user name, and not with anything
+    left over from previous calls.
+    
+    Signed-off-by: Ingo Franzki <ifranzki@linux.ibm.com>
+
+diff --git a/usr/sbin/pkcsstats/pkcsstats.c b/usr/sbin/pkcsstats/pkcsstats.c
+index c2444cf5..a842a295 100644
+--- a/usr/sbin/pkcsstats/pkcsstats.c
++++ b/usr/sbin/pkcsstats/pkcsstats.c
+@@ -783,6 +783,7 @@ int main(int argc, char **argv)
+     int opt = 0;
+     struct passwd *pswd = NULL;
+     int user_id = -1;
++    char *user_name = NULL;
+     bool summary = false, all_users = false, all_mechs = false;
+     bool reset = false, reset_all = false;
+     bool delete = false, delete_all = false;
+@@ -903,19 +904,27 @@ int main(int argc, char **argv)
+         }
+     }
+ 
++    user_name = strdup(pswd->pw_name);
++    if (user_name == NULL) {
++        warnx("Failed to get current user name");
++        exit(EXIT_FAILURE);
++    }
++
+     if (delete) {
+         if (slot_id_specified) {
+             warnx("Options -s/--slot and -d/--delete can not be specified together");
++            free(user_name);
+             exit(EXIT_FAILURE);
+         }
+ 
+-        rc = delete_shm(user_id, pswd->pw_name);
++        rc = delete_shm(user_id, user_name);
+         goto done;
+     }
+ 
+     if (delete_all) {
+         if (slot_id_specified) {
+             warnx("Options -s/--slot and -D/--delete-all can not be specified together");
++            free(user_name);
+             exit(EXIT_FAILURE);
+         }
+ 
+@@ -932,7 +941,7 @@ int main(int argc, char **argv)
+         goto done;
+ 
+     if (reset) {
+-        rc = reset_shm(user_id, pswd->pw_name, num_slots, slots,
++        rc = reset_shm(user_id, user_name, num_slots, slots,
+                        slot_id_specified, slot_id);
+         goto done;
+     }
+@@ -968,7 +977,7 @@ int main(int argc, char **argv)
+         rc = display_summary(&dd);
+         goto done;
+     } else {
+-        rc = display_stats(user_id, pswd->pw_name, &dd);
++        rc = display_stats(user_id, user_name, &dd);
+         goto done;
+     }
+ 
+@@ -984,5 +993,7 @@ done:
+         dlclose(dll);
+     }
+ 
++    free(user_name);
++
+     return rc == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
+ }
