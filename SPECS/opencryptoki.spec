@@ -1,7 +1,7 @@
 Name: opencryptoki
 Summary: Implementation of the PKCS#11 (Cryptoki) specification v3.0
 Version: 3.21.0
-Release: 9%{?dist}
+Release: 10%{?dist}
 License: CPL
 Group: System Environment/Base
 URL: https://github.com/opencryptoki/opencryptoki
@@ -15,6 +15,13 @@ Patch2: opencryptoki-3.21.0-p11sak.patch
 Patch3: opencryptoki-3.21-sandboxing.patch
 
 # upstream patches
+# CVE-2024-0914 opencryptoki: timing side-channel in handling of RSA PKCS#1 v1.5 padded ciphertexts
+Patch20: opencryptoki-v3.21.0-CVE-2024-0914-part01.patch
+Patch21: opencryptoki-v3.21.0-CVE-2024-0914-part02.patch
+Patch22: opencryptoki-v3.21.0-CVE-2024-0914-part03.patch
+Patch23: opencryptoki-v3.21.0-CVE-2024-0914-part04.patch
+Patch24: opencryptoki-v3.21.0-CVE-2024-0914-part05.patch
+
 # pkcsstats: Fix handling of user name
 Patch100: opencryptoki-3.21.0-f4166214552a92d8d66de8011ab11c9c2c6bb0a4.patch
 # p11sak: Fix user confirmation prompt behavior when stdin is closed
@@ -385,6 +392,10 @@ fi
 
 
 %changelog
+* Thu Feb 08 2024 Than Ngo <than@redhat.com> - 3.21.0-10
+- timing side-channel in handling of RSA PKCS#1 v1.5 padded ciphertexts (Marvin)
+Resolves: RHEL-23488
+
 * Tue Jul 18 2023 Than Ngo <than@redhat.com> - 3.21.0-9
 - Resolves: #2223588, FTBFS
 
