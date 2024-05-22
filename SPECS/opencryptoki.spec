@@ -1,7 +1,7 @@
 Name: opencryptoki
 Summary: Implementation of the PKCS#11 (Cryptoki) specification v3.0
-Version: 3.21.0
-Release: 10%{?dist}
+Version: 3.22.0
+Release: 3%{?dist}
 License: CPL
 Group: System Environment/Base
 URL: https://github.com/opencryptoki/opencryptoki
@@ -16,22 +16,11 @@ Patch3: opencryptoki-3.21-sandboxing.patch
 
 # upstream patches
 # CVE-2024-0914 opencryptoki: timing side-channel in handling of RSA PKCS#1 v1.5 padded ciphertexts
-Patch20: opencryptoki-v3.21.0-CVE-2024-0914-part01.patch
-Patch21: opencryptoki-v3.21.0-CVE-2024-0914-part02.patch
-Patch22: opencryptoki-v3.21.0-CVE-2024-0914-part03.patch
-Patch23: opencryptoki-v3.21.0-CVE-2024-0914-part04.patch
-Patch24: opencryptoki-v3.21.0-CVE-2024-0914-part05.patch
-
-# pkcsstats: Fix handling of user name
-Patch100: opencryptoki-3.21.0-f4166214552a92d8d66de8011ab11c9c2c6bb0a4.patch
-# p11sak: Fix user confirmation prompt behavior when stdin is closed
-Patch101: opencryptoki-3.21.0-4ff774568e334a719fc8de16fe2309e2070f0da8.patch
-# p11sak: Fix segfault in PEM_write_bio() on OpenSSL 1.1.1
-Patch102: opencryptoki-3.21.0-f8ddcd5ba7e5b0bab00dedc89021147ec55b41b3.patch
-# p11sak fails as soon as there reside non-key objects
-Patch103: opencryptoki-3.21.0-92999f344a3ad99a67a1bcfd9ad28f28c33e51bc.patch
-# opencryptoki p11sak tool: slot option does not accept argument 0 for slot index 0
-Patch104: opencryptoki-3.21.0-2ba0f41ef5e14d4b509c8854e27cf98e3ee89445.patch
+Patch20: opencryptoki-CVE-2024-0914-part1.patch
+Patch21: opencryptoki-CVE-2024-0914-part2.patch
+Patch22: opencryptoki-CVE-2024-0914-part3.patch
+Patch23: opencryptoki-CVE-2024-0914-part4.patch
+Patch24: opencryptoki-CVE-2024-0914-part5.patch
 
 Requires(pre): coreutils diffutils
 Requires: (selinux-policy >= 3.14.3-121 if selinux-policy-targeted)
@@ -392,9 +381,16 @@ fi
 
 
 %changelog
-* Thu Feb 08 2024 Than Ngo <than@redhat.com> - 3.21.0-10
+* Fri Feb 16 2024 Than Ngo <than@redhat.com> - 3.22.0-3
+- Fix implicit rejection with RSA keys with empty CKA_PRIVATE_EXPONENT
+Related: RHEL-22791
+
+* Thu Feb 08 2024 Than Ngo <than@redhat.com> - 3.22.0-2
 - timing side-channel in handling of RSA PKCS#1 v1.5 padded ciphertexts (Marvin)
-Resolves: RHEL-23488
+Resolves: RHEL-22791
+
+* Thu Nov 23 2023 Than Ngo <than@redhat.com> - 3.22.0-1
+- Resolves: RHEL-11413, update to 3.22.0
 
 * Tue Jul 18 2023 Than Ngo <than@redhat.com> - 3.21.0-9
 - Resolves: #2223588, FTBFS
