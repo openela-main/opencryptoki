@@ -1,0 +1,306 @@
+commit 5b20a1454ca464b07e7686340a579d8b1870e572
+Author: Ingo Franzki <ifranzki@linux.ibm.com>
+Date:   Wed Mar 20 08:44:25 2024 +0100
+
+    EP11: Reject combined extract attribute settings if it is not supported
+    
+    In case the control point setting of the adapters do not allow that attributes
+    CKA_EXTRACTABLE and CKA_IBM_PROTKEY_EXTRACTABLE are both true, then reject
+    this with CKR_TEMPLATE_INCONSISTENT.
+    
+    The EP11 code would reject that with CKR_FUNCTION_CANCELED, which for EP11
+    it means that it violates an internal policy (i.e. control point settings),
+    but in PKCS#11 this return code has a totally different meaning. So reject
+    such situations explicitly with the correct return code.
+    
+    Signed-off-by: Ingo Franzki <ifranzki@linux.ibm.com>
+
+diff --git a/usr/lib/ep11_stdll/ep11_specific.c b/usr/lib/ep11_stdll/ep11_specific.c
+index e2c9a77e..b5d788bf 100644
+--- a/usr/lib/ep11_stdll/ep11_specific.c
++++ b/usr/lib/ep11_stdll/ep11_specific.c
+@@ -1089,20 +1089,23 @@ static CK_BBOOL ep11tok_pkey_session_ok_for_obj(SESSION *session,
+  * Returns true if the given key object is eligible to get a protected key
+  * attribute, false otherwise.
+  */
+-CK_BBOOL ep11tok_pkey_obj_eligible_for_pkey_support(ep11_private_data_t *ep11_data,
+-                                                    OBJECT *key_obj)
++static CK_RV ep11tok_pkey_obj_eligible_for_pkey_support(
++                                                ep11_private_data_t *ep11_data,
++                                                OBJECT *key_obj)
+ {
+     if (object_is_attr_bound(key_obj) || !ep11_data->pkey_wrap_supported ||
+         !object_is_pkey_extractable(key_obj)) {
+-        return CK_FALSE;
++        return CKR_FUNCTION_NOT_SUPPORTED;
+     }
+ 
+     if (!ep11_data->pkey_combined_extract_supported &&
+         object_is_extractable(key_obj)) {
+-        return CK_FALSE;
++        TRACE_ERROR("Combined extract not supported, but CKA_EXTRACTABLE "
++                    "and CKA_IBM_PROTKEY_EXTRACTABLE are both TRUE\n");
++        return CKR_TEMPLATE_INCONSISTENT;
+     }
+ 
+-    return CK_TRUE;
++    return CKR_OK;
+ }
+ 
+ /**
+@@ -1176,7 +1179,8 @@ CK_RV ep11tok_pkey_check(STDLL_TokData_t *tokdata, SESSION *session,
+         if (ep11tok_pkey_get_firmware_mk_vp(tokdata, session) != CKR_OK)
+             goto done;
+ 
+-        if (!ep11tok_pkey_obj_eligible_for_pkey_support(ep11_data, key_obj))
++        ret = ep11tok_pkey_obj_eligible_for_pkey_support(ep11_data, key_obj);
++        if (ret != CKR_OK)
+             goto done;
+ 
+         if (template_attribute_get_non_empty(key_obj->template,
+@@ -1218,11 +1222,14 @@ done:
+ /**
+  * Wrapper function around ep11tok_pkey_check for the case where we don't
+  * have a key object. This function is called externally from new_host.c.
++ * Returns CKR_OK if pkey usage is OK, CKR_FUNCTION_NOT_SUPPORTED if pkey
++ * is not supported, or any other return code in case of an error. In such
++ * cases the calling function should itself return with an error, because
++ * neither the secure key nor the protected key path will work.
+  */
+-CK_BBOOL ep11tok_pkey_usage_ok(STDLL_TokData_t *tokdata, SESSION *session,
+-                               CK_OBJECT_HANDLE hkey, CK_MECHANISM *mech)
++CK_RV ep11tok_pkey_usage_ok(STDLL_TokData_t *tokdata, SESSION *session,
++                            CK_OBJECT_HANDLE hkey, CK_MECHANISM *mech)
+ {
+-    CK_BBOOL success = CK_FALSE;
+     size_t keyblobsize = 0;
+     CK_BYTE *keyblob;
+     OBJECT *key_obj;
+@@ -1232,17 +1239,15 @@ CK_BBOOL ep11tok_pkey_usage_ok(STDLL_TokData_t *tokdata, SESSION *session,
+                          READ_LOCK);
+     if (ret != CKR_OK) {
+         TRACE_ERROR("%s no blob ret=0x%lx\n", __func__, ret);
+-        return CK_FALSE;
++        return ret;
+     }
+ 
+     ret = ep11tok_pkey_check(tokdata, session, key_obj, mech);
+-    if (ret == CKR_OK)
+-        success = CK_TRUE;
+ 
+     object_put(tokdata, key_obj, TRUE);
+     key_obj = NULL;
+ 
+-    return success;
++    return ret;
+ }
+ 
+ CK_RV ep11tok_pkey_check_aes_xts(STDLL_TokData_t *tokdata, OBJECT *key_obj,
+@@ -1255,7 +1260,8 @@ CK_RV ep11tok_pkey_check_aes_xts(STDLL_TokData_t *tokdata, OBJECT *key_obj,
+         return CKR_MECHANISM_INVALID;
+     }
+ 
+-    if (!ep11tok_pkey_obj_eligible_for_pkey_support(ep11_data, key_obj)) {
++    if (ep11tok_pkey_obj_eligible_for_pkey_support(ep11_data,
++                                                   key_obj) != CKR_OK) {
+         TRACE_ERROR("Key not eligible for pkey support\n");
+         return CKR_TEMPLATE_INCONSISTENT;
+     }
+@@ -1307,10 +1313,10 @@ CK_RV token_specific_set_attrs_for_new_object(STDLL_TokData_t *tokdata,
+ {
+     ep11_private_data_t *ep11_data = tokdata->private_data;
+     CK_ATTRIBUTE *sensitive_attr = NULL;
+-    CK_BBOOL sensitive, btrue = CK_TRUE;
++    CK_BBOOL sensitive, extractable, pkey_extractable, btrue = CK_TRUE;
+ #ifndef NO_PKEY
+     CK_ATTRIBUTE *ecp_attr = NULL;
+-    CK_BBOOL extractable, add_pkey_extractable = CK_FALSE;
++    CK_BBOOL add_pkey_extractable = CK_FALSE;
+ #endif
+     CK_RV ret;
+ 
+@@ -1341,6 +1347,25 @@ CK_RV token_specific_set_attrs_for_new_object(STDLL_TokData_t *tokdata,
+         }
+     }
+ 
++    if (!ep11_data->pkey_combined_extract_supported) {
++        ret = template_attribute_get_bool(tmpl, CKA_EXTRACTABLE, &extractable);
++        if (ret != CKR_OK)
++            extractable = FALSE;
++
++        ret = template_attribute_get_bool(tmpl, CKA_IBM_PROTKEY_EXTRACTABLE,
++                                          &pkey_extractable);
++        if (ret != CKR_OK)
++            pkey_extractable = FALSE;
++
++        if (extractable && pkey_extractable) {
++            /* The EP11 call would return CKR_FUNCTION_CANCELED in that case */
++            TRACE_ERROR("Combined extract not supported, but CKA_EXTRACTABLE "
++                        "and CKA_IBM_PROTKEY_EXTRACTABLE are both TRUE\n");
++            ret = CKR_TEMPLATE_INCONSISTENT;
++            goto done;
++        }
++    }
++
+ #ifndef NO_PKEY
+     switch (ep11_data->pkey_mode) {
+     case PKEY_MODE_DISABLED:
+diff --git a/usr/lib/ep11_stdll/ep11_specific.h b/usr/lib/ep11_stdll/ep11_specific.h
+index 16d3c719..9ba28cb8 100644
+--- a/usr/lib/ep11_stdll/ep11_specific.h
++++ b/usr/lib/ep11_stdll/ep11_specific.h
+@@ -585,8 +585,8 @@ CK_BBOOL ep11tok_libica_mech_available(STDLL_TokData_t *tokdata,
+ CK_RV ep11tok_copy_firmware_info(STDLL_TokData_t *tokdata,
+                                  CK_TOKEN_INFO_PTR pInfo);
+ 
+-CK_BBOOL ep11tok_pkey_usage_ok(STDLL_TokData_t *tokdata, SESSION *session,
+-                               CK_OBJECT_HANDLE hkey, CK_MECHANISM *mech);
++CK_RV ep11tok_pkey_usage_ok(STDLL_TokData_t *tokdata, SESSION *session,
++                            CK_OBJECT_HANDLE hkey, CK_MECHANISM *mech);
+ 
+ CK_RV ep11tok_set_operation_state(STDLL_TokData_t *tokdata, SESSION *session);
+ 
+diff --git a/usr/lib/ep11_stdll/new_host.c b/usr/lib/ep11_stdll/new_host.c
+index 299a1d3c..f84d0810 100644
+--- a/usr/lib/ep11_stdll/new_host.c
++++ b/usr/lib/ep11_stdll/new_host.c
+@@ -2080,9 +2080,15 @@ CK_RV SC_EncryptInit(STDLL_TokData_t *tokdata, ST_SESSION_HANDLE *sSession,
+     sess->encr_ctx.multi_init = FALSE;
+     sess->encr_ctx.multi = FALSE;
+ 
++    rc = ep11tok_pkey_usage_ok(tokdata, sess, hKey, pMechanism);
++    if (rc != CKR_OK && rc != CKR_FUNCTION_NOT_SUPPORTED) {
++        /* CKR_FUNCTION_NOT_SUPPORTED indicates pkey support is not available,
++           but the ep11 fallback can be tried */
++        goto done;
++    }
+     if ((ep11tok_optimize_single_ops(tokdata) ||
+          ep11tok_mech_single_only(pMechanism)) &&
+-        !ep11tok_pkey_usage_ok(tokdata, sess, hKey, pMechanism)) {
++        rc == CKR_FUNCTION_NOT_SUPPORTED) {
+         /* In case of a single part encrypt operation we don't need the
+          * EncryptInit, instead we can use the EncryptSingle which is much
+          * faster. In case of multi-part operations we are doing the EncryptInit
+@@ -2179,9 +2185,16 @@ CK_RV SC_Encrypt(STDLL_TokData_t *tokdata, ST_SESSION_HANDLE *sSession,
+         goto done;
+     }
+ 
++    rc = ep11tok_pkey_usage_ok(tokdata, sess, sess->encr_ctx.key,
++                               &sess->encr_ctx.mech);
++    if (rc != CKR_OK && rc != CKR_FUNCTION_NOT_SUPPORTED) {
++        /* CKR_FUNCTION_NOT_SUPPORTED indicates pkey support is not available,
++           but the ep11 fallback can be tried */
++        goto done;
++    }
+     if ((ep11tok_optimize_single_ops(tokdata) ||
+          ep11tok_mech_single_only(&sess->encr_ctx.mech)) &&
+-        !ep11tok_pkey_usage_ok(tokdata, sess, sess->encr_ctx.key, &sess->encr_ctx.mech)) {
++        rc == CKR_FUNCTION_NOT_SUPPORTED) {
+         rc = ep11tok_encrypt_single(tokdata, sess, &sess->encr_ctx.mech,
+                                     length_only, sess->encr_ctx.key,
+                                     pData, ulDataLen, pEncryptedData,
+@@ -2408,9 +2421,15 @@ CK_RV SC_DecryptInit(STDLL_TokData_t *tokdata, ST_SESSION_HANDLE *sSession,
+     sess->decr_ctx.multi_init = FALSE;
+     sess->decr_ctx.multi = FALSE;
+ 
++    rc = ep11tok_pkey_usage_ok(tokdata, sess, hKey, pMechanism);
++    if (rc != CKR_OK && rc != CKR_FUNCTION_NOT_SUPPORTED) {
++        /* CKR_FUNCTION_NOT_SUPPORTED indicates pkey support is not available,
++           but the ep11 fallback can be tried */
++        goto done;
++    }
+     if ((ep11tok_optimize_single_ops(tokdata) ||
+          ep11tok_mech_single_only(pMechanism)) &&
+-        !ep11tok_pkey_usage_ok(tokdata, sess, hKey, pMechanism)) {
++        rc == CKR_FUNCTION_NOT_SUPPORTED) {
+         /* In case of a single part decrypt operation we don't need the
+          * DecryptInit, instead we can use the EncryptSingle which is much
+          * faster. In case of multi-part operations we are doing the DecryptInit
+@@ -2508,9 +2527,16 @@ CK_RV SC_Decrypt(STDLL_TokData_t *tokdata, ST_SESSION_HANDLE *sSession,
+         goto done;
+     }
+ 
++    rc = ep11tok_pkey_usage_ok(tokdata, sess, sess->decr_ctx.key,
++                               &sess->decr_ctx.mech);
++    if (rc != CKR_OK && rc != CKR_FUNCTION_NOT_SUPPORTED) {
++        /* CKR_FUNCTION_NOT_SUPPORTED indicates pkey support is not available,
++           but the ep11 fallback can be tried */
++        goto done;
++    }
+     if ((ep11tok_optimize_single_ops(tokdata) ||
+          ep11tok_mech_single_only(&sess->decr_ctx.mech)) &&
+-        !ep11tok_pkey_usage_ok(tokdata, sess, sess->decr_ctx.key, &sess->decr_ctx.mech)) {
++        rc == CKR_FUNCTION_NOT_SUPPORTED) {
+         rc = ep11tok_decrypt_single(tokdata, sess, &sess->decr_ctx.mech,
+                                     length_only, sess->decr_ctx.key,
+                                     pEncryptedData, ulEncryptedDataLen,
+@@ -2992,9 +3018,15 @@ CK_RV SC_SignInit(STDLL_TokData_t *tokdata, ST_SESSION_HANDLE *sSession,
+     sess->sign_ctx.multi_init = FALSE;
+     sess->sign_ctx.multi = FALSE;
+ 
++    rc = ep11tok_pkey_usage_ok(tokdata, sess, hKey, pMechanism);
++    if (rc != CKR_OK && rc != CKR_FUNCTION_NOT_SUPPORTED) {
++        /* CKR_FUNCTION_NOT_SUPPORTED indicates pkey support is not available,
++           but the ep11 fallback can be tried */
++        goto done;
++    }
+     if ((ep11tok_optimize_single_ops(tokdata) ||
+          ep11tok_mech_single_only(pMechanism)) &&
+-        !ep11tok_pkey_usage_ok(tokdata, sess, hKey, pMechanism)) {
++        rc == CKR_FUNCTION_NOT_SUPPORTED) {
+         /* In case of a single part sign operation we don't need the SignInit,
+          * instead we can use the SignSingle which is much faster.
+          * In case of multi-part operations we are doing the SignInit when
+@@ -3101,9 +3133,16 @@ CK_RV SC_Sign(STDLL_TokData_t *tokdata, ST_SESSION_HANDLE *sSession,
+         goto done;
+     }
+ 
++    rc = ep11tok_pkey_usage_ok(tokdata, sess, sess->sign_ctx.key,
++                               &sess->sign_ctx.mech);
++    if (rc != CKR_OK && rc != CKR_FUNCTION_NOT_SUPPORTED) {
++        /* CKR_FUNCTION_NOT_SUPPORTED indicates pkey support is not available,
++           but the ep11 fallback can be tried */
++        goto done;
++    }
+     if ((ep11tok_optimize_single_ops(tokdata) ||
+          ep11tok_mech_single_only(&sess->sign_ctx.mech)) &&
+-        !ep11tok_pkey_usage_ok(tokdata, sess, sess->sign_ctx.key, &sess->sign_ctx.mech)) {
++        rc == CKR_FUNCTION_NOT_SUPPORTED) {
+         rc = ep11tok_sign_single(tokdata, sess, &sess->sign_ctx.mech,
+                                  length_only, sess->sign_ctx.key,
+                                  pData, ulDataLen, pSignature, pulSignatureLen);
+@@ -3391,9 +3430,15 @@ CK_RV SC_VerifyInit(STDLL_TokData_t *tokdata, ST_SESSION_HANDLE *sSession,
+     sess->verify_ctx.multi_init = FALSE;
+     sess->verify_ctx.multi = FALSE;
+ 
++    rc = ep11tok_pkey_usage_ok(tokdata, sess, hKey, pMechanism);
++    if (rc != CKR_OK && rc != CKR_FUNCTION_NOT_SUPPORTED) {
++        /* CKR_FUNCTION_NOT_SUPPORTED indicates pkey support is not available,
++           but the ep11 fallback can be tried */
++        goto done;
++    }
+     if ((ep11tok_optimize_single_ops(tokdata) ||
+          ep11tok_mech_single_only(pMechanism)) &&
+-        !ep11tok_pkey_usage_ok(tokdata, sess, hKey, pMechanism)) {
++        rc == CKR_FUNCTION_NOT_SUPPORTED) {
+         /* In case of a single part verify operation we don't need the
+          * VerifyInit, instead we can use the VerifySingle which is much
+          * faster. In case of multi-part operations we are doing the VerifyInit
+@@ -3497,9 +3542,16 @@ CK_RV SC_Verify(STDLL_TokData_t *tokdata, ST_SESSION_HANDLE *sSession,
+         goto done;
+     }
+ 
++    rc = ep11tok_pkey_usage_ok(tokdata, sess, sess->verify_ctx.key,
++                               &sess->verify_ctx.mech);
++    if (rc != CKR_OK && rc != CKR_FUNCTION_NOT_SUPPORTED) {
++        /* CKR_FUNCTION_NOT_SUPPORTED indicates pkey support is not available,
++           but the ep11 fallback can be tried */
++        goto done;
++    }
+     if ((ep11tok_optimize_single_ops(tokdata) ||
+          ep11tok_mech_single_only(&sess->verify_ctx.mech)) &&
+-        !ep11tok_pkey_usage_ok(tokdata, sess, sess->verify_ctx.key, &sess->verify_ctx.mech)) {
++        rc == CKR_FUNCTION_NOT_SUPPORTED) {
+         rc = ep11tok_verify_single(tokdata, sess, &sess->verify_ctx.mech,
+                                    sess->verify_ctx.key, pData, ulDataLen,
+                                    pSignature, ulSignatureLen);

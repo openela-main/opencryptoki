@@ -1,0 +1,50 @@
+commit 2d68f8626d15b9697a29a377a63bbdf35b42ee36
+Author: Joerg Schmidbauer <jschmidb@de.ibm.com>
+Date:   Tue Feb 13 16:20:06 2024 +0100
+
+    EP11 pkey option: add new PKEY_MODE parms to ep11 config file
+    
+    Add two new parameter values ENABLE4EXTR and ENABLE4ALL to the ep11token
+    PKEY_MODE config option. Older ep11 card firmware enforces the restriction that
+    keys can not have CKA_EXTRACTABLE=true and CKA_IBM_PROTKEY_EXTRACTABLE=true at
+    the same time. With newer card firmware this restriction is removed and a new
+    control point is introduced to allow checking for this feature.
+    
+    Signed-off-by: Joerg Schmidbauer <jschmidb@de.ibm.com>
+
+diff --git a/usr/lib/ep11_stdll/ep11tok.conf b/usr/lib/ep11_stdll/ep11tok.conf
+index 19c9963f..afe237b9 100644
+--- a/usr/lib/ep11_stdll/ep11tok.conf
++++ b/usr/lib/ep11_stdll/ep11tok.conf
+@@ -104,7 +104,7 @@
+ # disabled and additional hardware and firmware prerequisites are met. AES-XTS
+ # is not supported via the EP11 coprocessor itself.
+ #
+-#      PKEY_MODE DISABLED | DEFAULT | ENABLE4NONEXTR
++#    PKEY_MODE DISABLED | DEFAULT | ENABLE4NONEXTR | ENABLE4EXTR | ENABLE4ALL
+ #
+ #        DISABLED       : Protected key support disabled. All key operations
+ #                         are performed via EP11 coprocessor, even if a
+@@ -119,6 +119,22 @@
+ #                         but not CKA_IBM_PROTKEY_EXTRACTABLE, new keys get 
+ #                         CKA_IBM_PROTKEY_EXTRACTABLE=true internally.
+ #
++#    Control point 75 (XCP_CPB_ALLOW_COMBINED_EXTRACT) must be enabled for all
++#    APQNs accessible by the token for the following parameters. 
++#
++#        ENABLE4EXTR    : If the application did not specify
++#                         CKA_IBM_PROTKEY_EXTRACTABLE in its template, new keys
++#                         of any type with CKA_EXTRACTABLE=true get
++#                         CKA_IBM_PROTKEY_EXTRACTABLE=true and a protected key
++#                         is automatically created at first use of the key.
++#
++#        ENABLE4ALL     : If the application did not specify 
++#                         CKA_IBM_PROTKEY_EXTRACTABLE in its template, new keys
++#                         of any type, regardless of the CKA_EXTRACTABLE
++#                         attribute, get CKA_IBM_PROTKEY_EXTRACTABLE=true and
++#                         a protected key is automatically created at first
++#                         use of the key.
++#
+ # --------------------------------------------------------------------------
+ # 
+ # Specify the expected wrapping key verification pattern. When specified, all

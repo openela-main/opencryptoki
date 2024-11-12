@@ -1,0 +1,61 @@
+commit 0bdcc661e64950e5ea11d950484631ba90e69426
+Author: Joerg Schmidbauer <jschmidb@de.ibm.com>
+Date:   Thu Mar 7 17:51:40 2024 +0100
+
+    EP11 pkey option: consolidate code parts, no logic change
+    
+    Signed-off-by: Joerg Schmidbauer <jschmidb@de.ibm.com>
+
+diff --git a/usr/lib/ep11_stdll/ep11_specific.c b/usr/lib/ep11_stdll/ep11_specific.c
+index 114c4ce1..9f855934 100644
+--- a/usr/lib/ep11_stdll/ep11_specific.c
++++ b/usr/lib/ep11_stdll/ep11_specific.c
+@@ -1369,11 +1369,6 @@ CK_RV token_specific_set_attrs_for_new_object(STDLL_TokData_t *tokdata,
+                 add_pkey_extractable = CK_TRUE;
+             break;
+         }
+-        if (add_pkey_extractable) {
+-            ret = ep11tok_pkey_add_protkey_attr_to_tmpl(tmpl);
+-            if (ret != CKR_OK)
+-                goto done;
+-        }
+         break;
+     case PKEY_MODE_ENABLE4EXTR:
+         /* If the application did not specify CKA_IBM_PROTKEY_EXTRACTABLE in
+@@ -1396,11 +1391,6 @@ CK_RV token_specific_set_attrs_for_new_object(STDLL_TokData_t *tokdata,
+                 add_pkey_extractable = CK_TRUE;
+             break;
+         }
+-        if (add_pkey_extractable) {
+-            ret = ep11tok_pkey_add_protkey_attr_to_tmpl(tmpl);
+-            if (ret != CKR_OK)
+-                goto done;
+-        }
+         break;
+     case PKEY_MODE_ENABLE4ALL:
+         /* If the application did not specify CKA_IBM_PROTKEY_EXTRACTABLE in
+@@ -1421,11 +1411,6 @@ CK_RV token_specific_set_attrs_for_new_object(STDLL_TokData_t *tokdata,
+             add_pkey_extractable = CK_TRUE;
+             break;
+         }
+-        if (add_pkey_extractable) {
+-            ret = ep11tok_pkey_add_protkey_attr_to_tmpl(tmpl);
+-            if (ret != CKR_OK)
+-                goto done;
+-        }
+         break;
+     default:
+         TRACE_ERROR("PKEY_MODE %i unsupported.\n", ep11_data->pkey_mode);
+@@ -1433,6 +1418,12 @@ CK_RV token_specific_set_attrs_for_new_object(STDLL_TokData_t *tokdata,
+         goto done;
+         break;
+     }
++
++    if (add_pkey_extractable) {
++        ret = ep11tok_pkey_add_protkey_attr_to_tmpl(tmpl);
++        if (ret != CKR_OK)
++            goto done;
++    }
+ #endif /* NO_PKEY */
+ 
+     ret = CKR_OK;

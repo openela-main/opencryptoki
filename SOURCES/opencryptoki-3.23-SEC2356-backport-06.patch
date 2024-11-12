@@ -1,0 +1,26 @@
+commit 88761bc4bd560801ec8a18b96cc82586dd719ca3
+Author: Joerg Schmidbauer <jschmidb@de.ibm.com>
+Date:   Tue Mar 12 17:13:33 2024 +0100
+
+    EP11: add check if protected-key support available at all
+    
+    If it is already known that the PKEY wrap is not supported or not
+    functioning (for whatever reason), then don't report the XTS
+    mechanisms as supported.
+    
+    Signed-off-by: Joerg Schmidbauer <jschmidb@de.ibm.com>
+
+diff --git a/usr/lib/ep11_stdll/ep11_specific.c b/usr/lib/ep11_stdll/ep11_specific.c
+index 9f855934..7850e43f 100644
+--- a/usr/lib/ep11_stdll/ep11_specific.c
++++ b/usr/lib/ep11_stdll/ep11_specific.c
+@@ -12001,7 +12001,8 @@ CK_RV ep11tok_is_mechanism_supported(STDLL_TokData_t *tokdata,
+ 
+     case CKM_AES_XTS:
+     case CKM_AES_XTS_KEY_GEN:
+-        if (ep11tok_pkey_option_disabled(tokdata) || ep11_data->msa_level < 4 ||
++        if ((ep11_data->pkey_wrap_support_checked && !ep11_data->pkey_wrap_supported) ||
++            ep11tok_pkey_option_disabled(tokdata) || ep11_data->msa_level < 4 ||
+             ep11tok_is_mechanism_supported(tokdata, CKM_IBM_CPACF_WRAP) != CKR_OK ||
+             ep11tok_is_mechanism_supported(tokdata, CKM_AES_KEY_GEN) != CKR_OK) {
+             TRACE_INFO("%s Mech '%s' not suppported\n", __func__,

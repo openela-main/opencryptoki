@@ -1,0 +1,31 @@
+commit 99b87ff678abfb71ba05741d1942e8ac723110c8
+Author: Joerg Schmidbauer <jschmidb@de.ibm.com>
+Date:   Tue Mar 12 17:30:36 2024 +0100
+
+    EP11: consider combined-extract for XTS pkey check
+    
+    Signed-off-by: Joerg Schmidbauer <jschmidb@de.ibm.com>
+
+diff --git a/usr/lib/ep11_stdll/ep11_specific.c b/usr/lib/ep11_stdll/ep11_specific.c
+index 7850e43f..e2c9a77e 100644
+--- a/usr/lib/ep11_stdll/ep11_specific.c
++++ b/usr/lib/ep11_stdll/ep11_specific.c
+@@ -1248,14 +1248,15 @@ CK_BBOOL ep11tok_pkey_usage_ok(STDLL_TokData_t *tokdata, SESSION *session,
+ CK_RV ep11tok_pkey_check_aes_xts(STDLL_TokData_t *tokdata, OBJECT *key_obj,
+                                  CK_MECHANISM_TYPE type)
+ {
++    ep11_private_data_t *ep11_data = tokdata->private_data;
++
+     if (ep11tok_is_mechanism_supported(tokdata, type) != CKR_OK) {
+         TRACE_ERROR("%s\n", ock_err(ERR_MECHANISM_INVALID));
+         return CKR_MECHANISM_INVALID;
+     }
+ 
+-    if (object_is_extractable(key_obj) ||
+-        !object_is_pkey_extractable(key_obj) ||
+-        object_is_attr_bound(key_obj)) {
++    if (!ep11tok_pkey_obj_eligible_for_pkey_support(ep11_data, key_obj)) {
++        TRACE_ERROR("Key not eligible for pkey support\n");
+         return CKR_TEMPLATE_INCONSISTENT;
+     }
+ 

@@ -1,7 +1,7 @@
 Name:			opencryptoki
 Summary:		Implementation of the PKCS#11 (Cryptoki) specification v3.0
-Version:		3.22.0
-Release:		3%{?dist}
+Version:		3.23.0
+Release:		1%{?dist}
 License:		CPL
 URL:			https://github.com/opencryptoki/opencryptoki
 Source0:		https://github.com/opencryptoki/%{name}/archive/v%{version}/%{name}-%{version}.tar.gz
@@ -11,12 +11,16 @@ Patch1:			opencryptoki-3.11.0-lockdir.patch
 Patch2:			opencryptoki-3.21.0-p11sak.patch
 
 # upstream patches
-# CVE-2024-0914 opencryptoki: timing side-channel in handling of RSA PKCS#1 v1.5 padded ciphertexts
-Patch20: opencryptoki-CVE-2024-0914-part1.patch
-Patch21: opencryptoki-CVE-2024-0914-part2.patch
-Patch22: opencryptoki-CVE-2024-0914-part3.patch
-Patch23: opencryptoki-CVE-2024-0914-part4.patch
-Patch24: opencryptoki-CVE-2024-0914-part5.patch
+# SEC2356-backport
+Patch100: opencryptoki-3.23-SEC2356-backport-01.patch
+Patch101: opencryptoki-3.23-SEC2356-backport-02.patch
+Patch102: opencryptoki-3.23-SEC2356-backport-03.patch
+Patch103: opencryptoki-3.23-SEC2356-backport-04.patch
+Patch104: opencryptoki-3.23-SEC2356-backport-05.patch
+Patch105: opencryptoki-3.23-SEC2356-backport-06.patch
+Patch106: opencryptoki-3.23-SEC2356-backport-07.patch
+Patch107: opencryptoki-3.23-SEC2356-backport-08.patch
+Patch108: opencryptoki-3.23-SEC2356-backport-09.patch
 
 Requires(pre):		coreutils diffutils
 Requires: 		(selinux-policy >= 38.1.14-1 if selinux-policy-targeted)
@@ -351,6 +355,11 @@ fi
 
 
 %changelog
+* Wed May 22 2024 Than Ngo <than@redhat.com> - 3.23.0-1
+- Resolves: RHEL-23671, ep11 token: support protected keys for extractable keys
+- Resolves: RHEL-23672, ep11 token support for FIPS 2021-session bound EP11 keys
+- Resolves: RHEL-23673, update to 3.23.0
+
 * Fri Feb 16 2024 Than Ngo <than@redhat.com> - 3.22.0-3
 - Fix implicit rejection with RSA keys with empty CKA_PRIVATE_EXPONENT
 Related: RHEL-22792
