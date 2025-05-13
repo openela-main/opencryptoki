@@ -1,51 +1,42 @@
-Name:			opencryptoki
-Summary:		Implementation of the PKCS#11 (Cryptoki) specification v3.0
-Version:		3.23.0
-Release:		1%{?dist}
-License:		CPL
-URL:			https://github.com/opencryptoki/opencryptoki
-Source0:		https://github.com/opencryptoki/%{name}/archive/v%{version}/%{name}-%{version}.tar.gz
-# bz#1373833, change tmpfiles snippets from /var/lock/* to /run/lock/*
-Patch1:			opencryptoki-3.11.0-lockdir.patch
-# add missing p11sak_defined_attrs.conf, strength.conf
-Patch2:			opencryptoki-3.21.0-p11sak.patch
+Name: opencryptoki
+Summary: Implementation of the PKCS#11 (Cryptoki) specification v3.0
+Version: 3.24.0
+Release: 3%{?dist}
+License: CPL-1.0
+URL: https://github.com/opencryptoki/opencryptoki
+Source0: https://github.com/opencryptoki/%{name}/archive/v%{version}/%{name}-%{version}.tar.gz
+# fix install problem in buildroot
+Patch1: opencryptoki-3.24.0-p11sak.patch
 
 # upstream patches
-# SEC2356-backport
-Patch100: opencryptoki-3.23-SEC2356-backport-01.patch
-Patch101: opencryptoki-3.23-SEC2356-backport-02.patch
-Patch102: opencryptoki-3.23-SEC2356-backport-03.patch
-Patch103: opencryptoki-3.23-SEC2356-backport-04.patch
-Patch104: opencryptoki-3.23-SEC2356-backport-05.patch
-Patch105: opencryptoki-3.23-SEC2356-backport-06.patch
-Patch106: opencryptoki-3.23-SEC2356-backport-07.patch
-Patch107: opencryptoki-3.23-SEC2356-backport-08.patch
-Patch108: opencryptoki-3.23-SEC2356-backport-09.patch
+Patch2: opencryptoki-3.24.0-compile-error-due-to-incompatible-pointer-types.patch
+Patch3: opencryptoki-3.24.0-resource-leaks.patch
 
-Requires(pre):		coreutils diffutils
-Requires: 		(selinux-policy >= 38.1.14-1 if selinux-policy-targeted)
-BuildRequires:		gcc
-BuildRequires:		gcc-c++
-BuildRequires:		openssl-devel >= 1.1.1
+Requires(pre): coreutils
+Requires: (selinux-policy >= 38.1.14-1 if selinux-policy-targeted)
+BuildRequires: gcc gcc-c++
+BuildRequires: openssl-devel >= 1.1.1
 %if 0%{?tmptok}
-BuildRequires:		trousers-devel
+BuildRequires: trousers-devel
 %endif
-BuildRequires:		openldap-devel
-BuildRequires:		autoconf automake libtool
-BuildRequires:		bison flex
-BuildRequires:		systemd-devel
-BuildRequires:		libcap-devel
-BuildRequires:		expect
-BuildRequires:		make
+BuildRequires: openldap-devel
+BuildRequires: autoconf automake libtool
+BuildRequires: bison flex
+BuildRequires: libcap-devel
+BuildRequires: expect
+BuildRequires: make
+BuildRequires: systemd-rpm-macros
 %ifarch s390 s390x
-BuildRequires:		libica-devel >= 3.3
+BuildRequires: libica-devel >= 3.3
+# for /usr/include/libudev.h
+BuildRequires: systemd-devel
 %endif
-Requires(pre):		%{name}-libs%{?_isa} = %{version}-%{release}
-Requires:		%{name}-libs%{?_isa} = %{version}-%{release}
-Requires:		%{name}(token)
-Requires(post):		systemd
-Requires(preun):	systemd
-Requires(postun):	systemd
+Requires(pre): %{name}-libs%{?_isa} = %{version}-%{release}
+Requires: %{name}-libs%{?_isa} = %{version}-%{release}
+Requires: %{name}(token)
+Requires(post): systemd diffutils
+Requires(preun): systemd
+Requires(postun): systemd
 
 
 %description
@@ -58,8 +49,8 @@ This package contains the Slot Daemon (pkcsslotd) and general utilities.
 
 
 %package libs
-Summary:		The run-time libraries for opencryptoki package
-Requires(pre):	shadow-utils
+Summary: The run-time libraries for opencryptoki package
+Requires(pre): shadow-utils
 
 %description libs
 Opencryptoki implements the PKCS#11 specification v2.20 for a set of
@@ -73,8 +64,8 @@ functional.
 
 
 %package devel
-Summary:		Development files for openCryptoki
-Requires:		%{name}-libs%{?_isa} = %{version}-%{release}
+Summary: Development files for openCryptoki
+Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 
 %description devel
 This package contains the development header files for building
@@ -82,10 +73,10 @@ opencryptoki and PKCS#11 based applications
 
 
 %package swtok
-Summary:		The software token implementation for opencryptoki
-Requires(pre):		%{name}-libs%{?_isa} = %{version}-%{release}
-Requires:		%{name}-libs%{?_isa} = %{version}-%{release}
-Provides:		%{name}(token)
+Summary: The software token implementation for opencryptoki
+Requires(pre): %{name}-libs%{?_isa} = %{version}-%{release}
+Requires: %{name}-libs%{?_isa} = %{version}-%{release}
+Provides: %{name}(token)
 
 %description swtok
 Opencryptoki implements the PKCS#11 specification v2.20 for a set of
@@ -98,10 +89,10 @@ without any specific cryptographic hardware.
 
 
 %package tpmtok
-Summary:		Trusted Platform Module (TPM) device support for opencryptoki
-Requires(pre):		%{name}-libs%{?_isa} = %{version}-%{release}
-Requires:		%{name}-libs%{?_isa} = %{version}-%{release}
-Provides:		%{name}(token)
+Summary: Trusted Platform Module (TPM) device support for opencryptoki
+Requires(pre): %{name}-libs%{?_isa} = %{version}-%{release}
+Requires: %{name}-libs%{?_isa} = %{version}-%{release}
+Provides: %{name}(token)
 
 %description tpmtok
 Opencryptoki implements the PKCS#11 specification v2.20 for a set of
@@ -114,10 +105,10 @@ Trusted Platform Module (TPM) devices in the opencryptoki stack.
 
 
 %package icsftok
-Summary:		ICSF token support for opencryptoki
-Requires(pre):		%{name}-libs%{?_isa} = %{version}-%{release}
-Requires:		%{name}-libs%{?_isa} = %{version}-%{release}
-Provides:		%{name}(token)
+Summary: ICSF token support for opencryptoki
+Requires(pre): %{name}-libs%{?_isa} = %{version}-%{release}
+Requires: %{name}-libs%{?_isa} = %{version}-%{release}
+Provides: %{name}(token)
 
 %description icsftok
 Opencryptoki implements the PKCS#11 specification v2.20 for a set of
@@ -129,12 +120,11 @@ This package brings the necessary libraries and files to support
 ICSF token in the opencryptoki stack.
 
 
-%ifarch s390 s390x
 %package icatok
-Summary:		ICA cryptographic devices (clear-key) support for opencryptoki
-Requires(pre):		%{name}-libs%{?_isa} = %{version}-%{release}
-Requires:		%{name}-libs%{?_isa} = %{version}-%{release}
-Provides:		%{name}(token)
+Summary: ICA cryptographic devices (clear-key) support for opencryptoki
+Requires(pre): %{name}-libs%{?_isa} = %{version}-%{release}
+Requires: %{name}-libs%{?_isa} = %{version}-%{release}
+Provides: %{name}(token)
 
 %description icatok
 Opencryptoki implements the PKCS#11 specification v2.20 for a set of
@@ -148,10 +138,10 @@ cryptographic hardware such as IBM 4764 or 4765 that uses the
 "accelerator" or "clear-key" path.
 
 %package ccatok
-Summary:		CCA cryptographic devices (secure-key) support for opencryptoki
-Requires(pre):		%{name}-libs%{?_isa} = %{version}-%{release}
-Requires:		%{name}-libs%{?_isa} = %{version}-%{release}
-Provides:		%{name}(token)
+Summary: CCA cryptographic devices (secure-key) support for opencryptoki
+Requires(pre): %{name}-libs%{?_isa} = %{version}-%{release}
+Requires: %{name}-libs%{?_isa} = %{version}-%{release}
+Provides: %{name}(token)
 
 %description ccatok
 Opencryptoki implements the PKCS#11 specification v2.20 for a set of
@@ -165,10 +155,10 @@ cryptographic hardware such as IBM 4764 or 4765 that uses the
 "co-processor" or "secure-key" path.
 
 %package ep11tok
-Summary:		CCA cryptographic devices (secure-key) support for opencryptoki
-Requires(pre):		%{name}-libs%{?_isa} = %{version}-%{release}
-Requires:		%{name}-libs%{?_isa} = %{version}-%{release}
-Provides:		%{name}(token)
+Summary: EP11 cryptographic devices (secure-key) support for opencryptoki
+Requires(pre): %{name}-libs%{?_isa} = %{version}-%{release}
+Requires: %{name}-libs%{?_isa} = %{version}-%{release}
+Provides: %{name}(token)
 
 %description ep11tok
 Opencryptoki implements the PKCS#11 specification v2.20 for a set of
@@ -180,7 +170,6 @@ This package brings the necessary libraries and files to support EP11
 tokens in the opencryptoki stack. The EP11 token is a token that uses
 the IBM Crypto Express adapters (starting with Crypto Express 4S adapters)
 configured with Enterprise PKCS#11 (EP11) firmware.
-%endif
 
 
 %prep
@@ -197,10 +186,15 @@ configured with Enterprise PKCS#11 (EP11) firmware.
 %else
     --disable-tpmtok \
 %endif
-%ifarch s390 s390x
-    --enable-icatok --enable-ccatok --enable-ep11tok --enable-pkcsep11_migrate
+%ifarch s390 s390x x86_64 ppc64le
+    --enable-ccatok \
 %else
-    --disable-icatok --disable-ccatok --disable-ep11tok --disable-pkcsep11_migrate
+    --disable-ccatok \
+%endif
+%ifarch s390 s390x
+    --enable-icatok --enable-ep11tok --enable-pkcsep11_migrate
+%else
+    --disable-icatok --disable-ep11tok --disable-pkcsep11_migrate --enable-pkcscca_migrate
 %endif
 
 %make_build CHGRP=/bin/true
@@ -209,9 +203,10 @@ configured with Enterprise PKCS#11 (EP11) firmware.
 %install
 %make_install CHGRP=/bin/true
 
+
 %pre
 # don't touch opencryptoki.conf even if it is unchanged due to new tokversion
-# backup config file
+# backup config file. bz#2044179
 %global cfile /etc/opencryptoki/opencryptoki.conf
 %global csuffix .rpmsave.XyoP
 if test $1 -gt 1 && test -f %{cfile} ; then
@@ -261,11 +256,13 @@ fi
 %{_sbindir}/pkcsslotd
 %{_sbindir}/pkcsstats
 %{_sbindir}/pkcshsm_mk_change
+%{_sbindir}/pkcstok_admin
 %{_mandir}/man1/p11sak.1*
 %{_mandir}/man1/pkcstok_migrate.1*
 %{_mandir}/man1/pkcsconf.1*
 %{_mandir}/man1/pkcsstats.1*
 %{_mandir}/man1/pkcshsm_mk_change.1*
+%{_mandir}/man1/pkcstok_admin.1*
 %{_mandir}/man5/policy.conf.5*
 %{_mandir}/man5/strength.conf.5*
 %{_mandir}/man5/%{name}.conf.5*
@@ -328,7 +325,9 @@ fi
 %{_libdir}/opencryptoki/stdll/PKCS11_ICA.so
 %dir %attr(770,root,pkcs11) %{_sharedstatedir}/%{name}/lite/
 %dir %attr(770,root,pkcs11) %{_sharedstatedir}/%{name}/lite/TOK_OBJ/
+%endif
 
+%ifarch s390 s390x x86_64 ppc64le
 %files ccatok
 %doc doc/README.cca_stdll
 %config(noreplace) %{_sysconfdir}/%{name}/ccatok.conf
@@ -338,7 +337,9 @@ fi
 %{_libdir}/opencryptoki/stdll/PKCS11_CCA.so
 %dir %attr(770,root,pkcs11) %{_sharedstatedir}/%{name}/ccatok/
 %dir %attr(770,root,pkcs11) %{_sharedstatedir}/%{name}/ccatok/TOK_OBJ/
+%endif
 
+%ifarch s390 s390x
 %files ep11tok
 %doc doc/README.ep11_stdll
 %config(noreplace) %{_sysconfdir}/%{name}/ep11tok.conf
@@ -355,6 +356,21 @@ fi
 
 
 %changelog
+* Tue Nov 26 2024 Than Ngo <than@redhat.com> - 3.24.0-3
+- Disable ccatok on aarch64
+  Related: RHEL-50064
+
+* Thu Nov 07 2024 Than Ngo <than@redhat.com> - 3.24.0-2
+- Fix resource leak
+  Related: RHEL-50064
+
+* Tue Oct 22 2024 Than Ngo <than@redhat.com> - 3.24.0-1
+- Resolves: RHEL-50064, update to 3.24.0
+- Resolves: RHEL-50063, opencryptoki CCA Token support for x86_64 and ppc64le
+- Resolves: RHEL-50058, openCryptoki CCA token support of Dilithium
+- Resolves: RHEL-50056, openCryptoki cca token SHA3 support
+- Resolves: RHEL-50057, openCryptoki cca token RSA OAEP v2.1 support
+
 * Wed May 22 2024 Than Ngo <than@redhat.com> - 3.23.0-1
 - Resolves: RHEL-23671, ep11 token: support protected keys for extractable keys
 - Resolves: RHEL-23672, ep11 token support for FIPS 2021-session bound EP11 keys
