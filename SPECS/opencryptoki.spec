@@ -1,7 +1,7 @@
 Name: opencryptoki
 Summary: Implementation of the PKCS#11 (Cryptoki) specification v3.0
 Version: 3.22.0
-Release: 3%{?dist}
+Release: 3%{?dist}.1
 License: CPL
 Group: System Environment/Base
 URL: https://github.com/opencryptoki/opencryptoki
@@ -21,6 +21,8 @@ Patch21: opencryptoki-CVE-2024-0914-part2.patch
 Patch22: opencryptoki-CVE-2024-0914-part3.patch
 Patch23: opencryptoki-CVE-2024-0914-part4.patch
 Patch24: opencryptoki-CVE-2024-0914-part5.patch
+# supporting CCA 8.4
+Patch25: 3.22-CCA-Adjust-CCA-host-library-version-detection-for-ne.patch
 
 Requires(pre): coreutils diffutils
 Requires: (selinux-policy >= 3.14.3-121 if selinux-policy-targeted)
@@ -381,6 +383,9 @@ fi
 
 
 %changelog
+* Mon Aug 11 2025 Than Ngo <than@redhat.com> - 3.22.0-3.1
+- Resolves: RHEL-105918, fix for supporting CCA 8.4
+
 * Fri Feb 16 2024 Than Ngo <than@redhat.com> - 3.22.0-3
 - Fix implicit rejection with RSA keys with empty CKA_PRIVATE_EXPONENT
 Related: RHEL-22791
