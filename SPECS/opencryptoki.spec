@@ -1,7 +1,7 @@
 Name: opencryptoki
 Summary: Implementation of the PKCS#11 (Cryptoki) specification v3.0
 Version: 3.24.0
-Release: 3%{?dist}
+Release: 5%{?dist}
 License: CPL-1.0
 URL: https://github.com/opencryptoki/opencryptoki
 Source0: https://github.com/opencryptoki/%{name}/archive/v%{version}/%{name}-%{version}.tar.gz
@@ -11,6 +11,7 @@ Patch1: opencryptoki-3.24.0-p11sak.patch
 # upstream patches
 Patch2: opencryptoki-3.24.0-compile-error-due-to-incompatible-pointer-types.patch
 Patch3: opencryptoki-3.24.0-resource-leaks.patch
+Patch4: 3.24-CCA-Adjust-CCA-host-library-version-detection-for-ne.patch
 
 Requires(pre): coreutils
 Requires: (selinux-policy >= 38.1.14-1 if selinux-policy-targeted)
@@ -356,6 +357,12 @@ fi
 
 
 %changelog
+* Mon Aug 11 2025 Than Ngo <than@redhat.com> - 3.24.0-5
+- Related: RHEL-106414, rebuilt
+
+* Sun Aug 10 2025 Than Ngo <than@redhat.com> - 3.24.0-4
+- Resolves: RHEL-108011, supporting CCA 8.4
+
 * Tue Nov 26 2024 Than Ngo <than@redhat.com> - 3.24.0-3
 - Disable ccatok on aarch64
   Related: RHEL-50064
