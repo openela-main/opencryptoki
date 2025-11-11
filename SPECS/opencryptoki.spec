@@ -1,22 +1,41 @@
 Name: opencryptoki
-Summary: Implementation of the PKCS#11 (Cryptoki) specification v3.0
-Version: 3.24.0
-Release: 5%{?dist}
+Summary: Implementation of the PKCS#11 (Cryptoki) specification v3.0 and partially v3.1
+Version: 3.25.0
+Release: 4%{?dist}
 License: CPL-1.0
 URL: https://github.com/opencryptoki/opencryptoki
 Source0: https://github.com/opencryptoki/%{name}/archive/v%{version}/%{name}-%{version}.tar.gz
+# sysusers.d config file to allow rpm to create users/groups automatically
+Source1: opencryptoki.sysusers.conf
+
 # fix install problem in buildroot
-Patch1: opencryptoki-3.24.0-p11sak.patch
+Patch1: opencryptoki-3.25.0-p11sak.patch
+
+# tmpfiles.d config files for image mode
+Patch2: opencryptoki-3.24.0-tmpfiles-image-mode.patch
+
+# everything using /var/lock should be fixed in the end to use /run/lock
+# https://gitlab.com/fedora/bootc/base-images/-/issues/48
+Patch3: opencryptoki-lockdir-image-mode.patch
 
 # upstream patches
-Patch2: opencryptoki-3.24.0-compile-error-due-to-incompatible-pointer-types.patch
-Patch3: opencryptoki-3.24.0-resource-leaks.patch
-Patch4: 3.24-CCA-Adjust-CCA-host-library-version-detection-for-ne.patch
+# Fix detection of EC curve not supported by OpenSSL-3.5.x
+Patch10: opencryptoki-openssl-3.5.x.patch
+
+# Fix covscan findings, https://github.com/opencryptoki/opencryptoki/pull/880
+Patch11: opencryptoki-3.25.0-covscan-findings.patch
+
+# Remove the use of MD5, pkcsslotd crashes in FIPS mode
+Patch12: opencryptoki-3.25.0-reject-using-md5-in-fips-mode.patch
 
 Requires(pre): coreutils
 Requires: (selinux-policy >= 38.1.14-1 if selinux-policy-targeted)
 BuildRequires: gcc gcc-c++
 BuildRequires: openssl-devel >= 1.1.1
+# testcases require 'openssl' command line tool
+BuildRequires: openssl >= 1.1.1
+# testcases require 'jq' command line tool
+BuildRequires: jq
 %if 0%{?tmptok}
 BuildRequires: trousers-devel
 %endif
@@ -26,7 +45,9 @@ BuildRequires: bison flex
 BuildRequires: libcap-devel
 BuildRequires: expect
 BuildRequires: make
+# sysusers_create_compat macro
 BuildRequires: systemd-rpm-macros
+%{?sysusers_requires_compat}
 %ifarch s390 s390x
 BuildRequires: libica-devel >= 3.3
 # for /usr/include/libudev.h
@@ -41,10 +62,10 @@ Requires(postun): systemd
 
 
 %description
-Opencryptoki implements the PKCS#11 specification v2.20 for a set of
-cryptographic hardware, such as IBM 4764 and 4765 crypto cards, and the
-Trusted Platform Module (TPM) chip. Opencryptoki also brings a software
-token implementation that can be used without any cryptographic
+Opencryptoki implements the PKCS#11 specification  v3.0 and partially v3.1
+for a set of cryptographic hardware, such as IBM 4767, 4768, 4769 and 4770
+crypto cards, and the Trusted Platform Module (TPM) chip. Opencryptoki also
+brings a software token implementation that can be used without any cryptographic
 hardware.
 This package contains the Slot Daemon (pkcsslotd) and general utilities.
 
@@ -54,10 +75,10 @@ Summary: The run-time libraries for opencryptoki package
 Requires(pre): shadow-utils
 
 %description libs
-Opencryptoki implements the PKCS#11 specification v2.20 for a set of
-cryptographic hardware, such as IBM 4764 and 4765 crypto cards, and the
-Trusted Platform Module (TPM) chip. Opencryptoki also brings a software
-token implementation that can be used without any cryptographic
+Opencryptoki implements the PKCS#11 specification  v3.0 and partially v3.1
+for a set of cryptographic hardware, such as IBM 4767, 4768, 4769 and 4770
+crypto cards, and the Trusted Platform Module (TPM) chip. Opencryptoki also
+brings a software token implementation that can be used without any cryptographic
 hardware.
 This package contains the PKCS#11 library implementation, and requires
 at least one token implementation (packaged separately) to be fully
@@ -80,10 +101,10 @@ Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 Provides: %{name}(token)
 
 %description swtok
-Opencryptoki implements the PKCS#11 specification v2.20 for a set of
-cryptographic hardware, such as IBM 4764 and 4765 crypto cards, and the
-Trusted Platform Module (TPM) chip. Opencryptoki also brings a software
-token implementation that can be used without any cryptographic
+Opencryptoki implements the PKCS#11 specification  v3.0 and partially v3.1
+for a set of cryptographic hardware, such as IBM 4767, 4768, 4769 and 4770
+crypto cards, and the Trusted Platform Module (TPM) chip. Opencryptoki also
+brings a software token implementation that can be used without any cryptographic
 hardware.
 This package brings the software token implementation to use opencryptoki
 without any specific cryptographic hardware.
@@ -96,10 +117,10 @@ Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 Provides: %{name}(token)
 
 %description tpmtok
-Opencryptoki implements the PKCS#11 specification v2.20 for a set of
-cryptographic hardware, such as IBM 4764 and 4765 crypto cards, and the
-Trusted Platform Module (TPM) chip. Opencryptoki also brings a software
-token implementation that can be used without any cryptographic
+Opencryptoki implements the PKCS#11 specification  v3.0 and partially v3.1
+for a set of cryptographic hardware, such as IBM 4767, 4768, 4769 and 4770
+crypto cards, and the Trusted Platform Module (TPM) chip. Opencryptoki also
+brings a software token implementation that can be used without any cryptographic
 hardware.
 This package brings the necessary libraries and files to support
 Trusted Platform Module (TPM) devices in the opencryptoki stack.
@@ -112,10 +133,10 @@ Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 Provides: %{name}(token)
 
 %description icsftok
-Opencryptoki implements the PKCS#11 specification v2.20 for a set of
-cryptographic hardware, such as IBM 4764 and 4765 crypto cards, and the
-Trusted Platform Module (TPM) chip. Opencryptoki also brings a software
-token implementation that can be used without any cryptographic
+Opencryptoki implements the PKCS#11 specification  v3.0 and partially v3.1
+for a set of cryptographic hardware, such as IBM 4767, 4768, 4769 and 4770
+crypto cards, and the Trusted Platform Module (TPM) chip. Opencryptoki also
+brings a software token implementation that can be used without any cryptographic
 hardware.
 This package brings the necessary libraries and files to support
 ICSF token in the opencryptoki stack.
@@ -128,14 +149,14 @@ Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 Provides: %{name}(token)
 
 %description icatok
-Opencryptoki implements the PKCS#11 specification v2.20 for a set of
-cryptographic hardware, such as IBM 4764 and 4765 crypto cards, and the
-Trusted Platform Module (TPM) chip. Opencryptoki also brings a software
-token implementation that can be used without any cryptographic
+Opencryptoki implements the PKCS#11 specification  v3.0 and partially v3.1
+for a set of cryptographic hardware, such as IBM 4767, 4768, 4769 and 4770
+crypto cards, and the Trusted Platform Module (TPM) chip. Opencryptoki also
+brings a software token implementation that can be used without any cryptographic
 hardware.
 This package brings the necessary libraries and files to support ICA
 devices in the opencryptoki stack. ICA is an interface to IBM
-cryptographic hardware such as IBM 4764 or 4765 that uses the
+cryptographic hardware such as IBM 4767, 4768, 4769 and 4770 that uses the
 "accelerator" or "clear-key" path.
 
 %package ccatok
@@ -145,14 +166,14 @@ Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 Provides: %{name}(token)
 
 %description ccatok
-Opencryptoki implements the PKCS#11 specification v2.20 for a set of
-cryptographic hardware, such as IBM 4764 and 4765 crypto cards, and the
-Trusted Platform Module (TPM) chip. Opencryptoki also brings a software
-token implementation that can be used without any cryptographic
+Opencryptoki implements the PKCS#11 specification  v3.0 and partially v3.1
+for a set of cryptographic hardware, such as IBM 4767, 4768, 4769 and 4770
+crypto cards, and the Trusted Platform Module (TPM) chip. Opencryptoki also
+brings a software token implementation that can be used without any cryptographic
 hardware.
 This package brings the necessary libraries and files to support CCA
 devices in the opencryptoki stack. CCA is an interface to IBM
-cryptographic hardware such as IBM 4764 or 4765 that uses the
+cryptographic hardware such as IBM 4767, 4768, 4769 and 4770 that uses the
 "co-processor" or "secure-key" path.
 
 %package ep11tok
@@ -162,10 +183,10 @@ Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 Provides: %{name}(token)
 
 %description ep11tok
-Opencryptoki implements the PKCS#11 specification v2.20 for a set of
-cryptographic hardware, such as IBM 4764 and 4765 crypto cards, and the
-Trusted Platform Module (TPM) chip. Opencryptoki also brings a software
-token implementation that can be used without any cryptographic
+Opencryptoki implements the PKCS#11 specification  v3.0 and partially v3.1
+for a set of cryptographic hardware, such as IBM 4767, 4768, 4769 and 4770
+crypto cards, and the Trusted Platform Module (TPM) chip. Opencryptoki also
+brings a software token implementation that can be used without any cryptographic
 hardware.
 This package brings the necessary libraries and files to support EP11
 tokens in the opencryptoki stack. The EP11 token is a token that uses
@@ -204,6 +225,32 @@ configured with Enterprise PKCS#11 (EP11) firmware.
 %install
 %make_install CHGRP=/bin/true
 
+# Install sysusers.d config file
+install -p -D -m 0644 %{SOURCE1} %{buildroot}%{_sysusersdir}/%{name}.sysusers.conf
+
+# Install tmpfiles.d config files
+%ifarch s390 s390x
+install -p -D -m 0644 %{name}-icatok.conf %{buildroot}%{_tmpfilesdir}/
+install -p -D -m 0644 %{name}-ep11tok.conf %{buildroot}%{_tmpfilesdir}/
+%endif
+
+%ifarch s390 s390x x86_64 ppc64le
+install -p -D -m 0644 %{name}-ccatok.conf %{buildroot}%{_tmpfilesdir}/
+%endif
+
+%if 0%{?tmptok}
+install -p -D -m 0644 %{name}-tpmtok.conf %{buildroot}%{_tmpfilesdir}/
+%endif
+
+install -p -D -m 0644 %{name}-swtok.conf %{buildroot}%{_tmpfilesdir}/
+install -p -D -m 0644 %{name}-icsftok.conf %{buildroot}%{_tmpfilesdir}/
+
+# convert absolute links to relative links.
+rm -f %{buildroot}%{_libdir}/%{name}/methods && ln -fs ../../bin %{buildroot}%{_libdir}/%{name}/methods
+rm -f %{buildroot}%{_libdir}/pkcs11/methods && ln -fs ../../bin %{buildroot}%{_libdir}/pkcs11/methods
+
+%check
+make check
 
 %pre
 # don't touch opencryptoki.conf even if it is unchanged due to new tokversion
@@ -215,9 +262,7 @@ if test $1 -gt 1 && test -f %{cfile} ; then
 fi
 
 %pre libs
-getent group pkcs11 >/dev/null || groupadd -r pkcs11
-getent passwd pkcsslotd >/dev/null || useradd -r -g pkcs11 -d /run/opencryptoki -s /sbin/nologin -c "Opencryptoki pkcsslotd user" pkcsslotd
-exit 0
+%sysusers_create_compat %{SOURCE1}
 
 %post
 # restore the config file from %pre
@@ -247,11 +292,13 @@ fi
 %doc %{_docdir}/%{name}/*.conf
 %dir %{_sysconfdir}/%{name}
 %verify(not md5 size mtime) %config(noreplace) %{_sysconfdir}/%{name}/%{name}.conf
-%attr(0640, root, pkcs11) %config(noreplace) %{_sysconfdir}/%{name}/p11sak_defined_attrs.conf
-%attr(0640, root, pkcs11) %config(noreplace) %{_sysconfdir}/%{name}/strength.conf
+%verify(not md5 size mtime) %attr(0640, root, pkcs11) %config(noreplace) %{_sysconfdir}/%{name}/p11sak_defined_attrs.conf
+%verify(not md5 size mtime) %attr(0640, root, pkcs11) %config(noreplace) %{_sysconfdir}/%{name}/strength.conf
+%verify(not md5 size mtime) %attr(0640, root, pkcs11) %config(noreplace) %{_sysconfdir}/%{name}/p11kmip.conf
 %{_tmpfilesdir}/%{name}.conf
 %{_unitdir}/pkcsslotd.service
 %{_sbindir}/p11sak
+%{_sbindir}/p11kmip
 %{_sbindir}/pkcstok_migrate
 %{_sbindir}/pkcsconf
 %{_sbindir}/pkcsslotd
@@ -261,11 +308,13 @@ fi
 %{_mandir}/man1/p11sak.1*
 %{_mandir}/man1/pkcstok_migrate.1*
 %{_mandir}/man1/pkcsconf.1*
+%{_mandir}/man1/p11kmip.1*
 %{_mandir}/man1/pkcsstats.1*
 %{_mandir}/man1/pkcshsm_mk_change.1*
 %{_mandir}/man1/pkcstok_admin.1*
 %{_mandir}/man5/policy.conf.5*
 %{_mandir}/man5/strength.conf.5*
+%{_mandir}/man5/p11kmip.conf.5*
 %{_mandir}/man5/%{name}.conf.5*
 %{_mandir}/man5/p11sak_defined_attrs.conf.5*
 %{_mandir}/man7/%{name}.7*
@@ -293,6 +342,7 @@ fi
 %{_libdir}/pkcs11/PKCS11_API.so
 %{_libdir}/pkcs11/stdll
 %dir %attr(770,root,pkcs11) %{_localstatedir}/log/opencryptoki
+%{_sysusersdir}/%{name}.sysusers.conf
 
 %files devel
 %{_includedir}/%{name}/
@@ -303,6 +353,7 @@ fi
 %{_libdir}/opencryptoki/stdll/PKCS11_SW.so
 %dir %attr(770,root,pkcs11) %{_sharedstatedir}/%{name}/swtok/
 %dir %attr(770,root,pkcs11) %{_sharedstatedir}/%{name}/swtok/TOK_OBJ/
+%{_tmpfilesdir}/%{name}-swtok.conf
 
 %if 0%{?tmptok}
 %files tpmtok
@@ -310,6 +361,7 @@ fi
 %{_libdir}/opencryptoki/stdll/libpkcs11_tpm.*
 %{_libdir}/opencryptoki/stdll/PKCS11_TPM.so
 %dir %attr(770,root,pkcs11) %{_sharedstatedir}/%{name}/tpm/
+%{_tmpfilesdir}/%{name}-tpmtok.conf
 %endif
 
 %files icsftok
@@ -319,6 +371,7 @@ fi
 %{_libdir}/opencryptoki/stdll/libpkcs11_icsf.*
 %{_libdir}/opencryptoki/stdll/PKCS11_ICSF.so
 %dir %attr(770,root,pkcs11) %{_sharedstatedir}/%{name}/icsf/
+%{_tmpfilesdir}/%{name}-icsftok.conf
 
 %ifarch s390 s390x
 %files icatok
@@ -326,6 +379,7 @@ fi
 %{_libdir}/opencryptoki/stdll/PKCS11_ICA.so
 %dir %attr(770,root,pkcs11) %{_sharedstatedir}/%{name}/lite/
 %dir %attr(770,root,pkcs11) %{_sharedstatedir}/%{name}/lite/TOK_OBJ/
+%{_tmpfilesdir}/%{name}-icatok.conf
 %endif
 
 %ifarch s390 s390x x86_64 ppc64le
@@ -338,6 +392,7 @@ fi
 %{_libdir}/opencryptoki/stdll/PKCS11_CCA.so
 %dir %attr(770,root,pkcs11) %{_sharedstatedir}/%{name}/ccatok/
 %dir %attr(770,root,pkcs11) %{_sharedstatedir}/%{name}/ccatok/TOK_OBJ/
+%{_tmpfilesdir}/%{name}-ccatok.conf
 %endif
 
 %ifarch s390 s390x
@@ -353,15 +408,41 @@ fi
 %{_libdir}/opencryptoki/stdll/PKCS11_EP11.so
 %dir %attr(770,root,pkcs11) %{_sharedstatedir}/%{name}/ep11tok/
 %dir %attr(770,root,pkcs11) %{_sharedstatedir}/%{name}/ep11tok/TOK_OBJ/
+%{_tmpfilesdir}/%{name}-ep11tok.conf
 %endif
 
 
 %changelog
-* Mon Aug 11 2025 Than Ngo <than@redhat.com> - 3.24.0-5
-- Related: RHEL-106414, rebuilt
+* Wed Aug 13 2025 Than Ngo <than@redhat.com> - 3.25.0-4
+- Fix pkcsslotd fails to start in FIPS
+- Drop tier1 test as it mostly provides duplicate results
+- Enable ci test for FIPS mode
+  Resolves: RHEL-109050
 
-* Sun Aug 10 2025 Than Ngo <than@redhat.com> - 3.24.0-4
-- Resolves: RHEL-108011, supporting CCA 8.4
+* Mon Jul 21 2025 Than Ngo <than@redhat.com> - 3.25.0-3
+- Fix incorrect effective group id of pkcsslotd daemon
+- Fix covscan findings
+  Resolves: RHEL-104602
+
+* Mon Jul 14 2025 Than Ngo <than@redhat.com> - 3.25.0-2
+- Related: RHEL-73344, Fix detection of EC curve not supported by OpenSSL-3.5.x
+- Related: RHEL-77147, Fix the image mode issue again as bootc expects to use /run/lock
+
+* Fri Jul 04 2025 Than Ngo <than@redhat.com> - 3.25.0-1
+- Resolves: RHEL-73344, upgrade openCryptoki
+- Resolves: RHEL-90590, basic support of AES-GCM
+- Resolves: RHEL-72965, cca token support cipher keys
+- Resolves: RHEL-72969, support for CKM_RSA_AES_KEY_WRAP for cca, ica and soft tokens
+- Resolves: RHEL-75141, add a tool to import/export PKCS #11 keys from to a KMIP server
+- Resolves: RHEL-75762, ep11 token: import and export of secure key objects
+- Resolves: RHEL-85375, cca token: Support ECDH to derive AES keys
+- Resolves: RHEL-85377, ep11 token: PKCS #11 3.0 - support SHA3
+
+* Wed Apr 09 2025 Than Ngo <than@redhat.com> - 3.24.0-5
+- Related: RHEL-77147, opencryptoki doesn't work in image mode
+
+* Wed Mar 19 2025 Than Ngo <than@redhat.com> - 3.24.0-4
+- Resolves: RHEL-77147, opencryptoki doesn't work in image mode
 
 * Tue Nov 26 2024 Than Ngo <than@redhat.com> - 3.24.0-3
 - Disable ccatok on aarch64
