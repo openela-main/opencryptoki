@@ -1,7 +1,7 @@
 Name: opencryptoki
 Summary: Implementation of the PKCS#11 (Cryptoki) specification v3.0 and partially v3.1
 Version: 3.25.0
-Release: 5%{?dist}
+Release: 5%{?dist}.1
 License: CPL-1.0
 URL: https://github.com/opencryptoki/opencryptoki
 Source0: https://github.com/opencryptoki/%{name}/archive/v%{version}/%{name}-%{version}.tar.gz
@@ -29,6 +29,14 @@ Patch11: opencryptoki-3.25.0-covscan-findings.patch
 
 # Remove the use of MD5, pkcsslotd crashes in FIPS mode
 Patch12: opencryptoki-3.25.0-reject-using-md5-in-fips-mode.patch
+
+# EP11: Fix unwrapping of attribute bound EC keys
+# https://github.com/ifranzki/opencryptoki/commit/d3dc88c
+Patch13: opencryptoki-3.25.0-fix-unwrapping-attribute-bound-EC-keys.patch
+
+# EP11: Fix private secure key blob import
+# https://github.com/ifranzki/opencryptoki/commit/ab740fd
+Patch14: opencryptoki-3.25.0-fix-private-secure-key-blob-import.patch
 
 Requires(pre): coreutils
 Requires: (selinux-policy >= 34.9-1 if selinux-policy-targeted)
@@ -417,6 +425,11 @@ fi
 
 
 %changelog
+* Mon Feb 02 2026 Than Ngo <than@redhat.com> - 3.25.0-5.1
+- Fix unwrapping of attribute bound EC keys
+- Fix private secure key blob import
+  Resolves: RHEL-131645
+
 * Wed Aug 13 2025 Than Ngo <than@redhat.com> - 3.25.0-5
 - Resolves: RHEL-109017, pkcsslotd fails to start in FIPS mode 
 
