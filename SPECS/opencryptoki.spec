@@ -1,7 +1,7 @@
 Name: opencryptoki
 Summary: Implementation of the PKCS#11 (Cryptoki) specification v3.0 and partially v3.1
 Version: 3.25.0
-Release: 4%{?dist}.1
+Release: 4%{?dist}.2
 License: CPL-1.0
 URL: https://github.com/opencryptoki/opencryptoki
 Source0: https://github.com/opencryptoki/%{name}/archive/v%{version}/%{name}-%{version}.tar.gz
@@ -35,6 +35,9 @@ Patch13: opencryptoki-3.25.0-fix-unwrapping-attribute-bound-EC-keys.patch
 # EP11: Fix private secure key blob import
 # https://github.com/ifranzki/opencryptoki/commit/ab740fd
 Patch14: opencryptoki-3.25.0-fix-private-secure-key-blob-import.patch
+
+# CVE-2026-23893, symlink-following vulnerabilities
+Patch15: opencryptoki-3.25.0-CVE-2026-23893.patch
 
 Requires(pre): coreutils
 Requires: (selinux-policy >= 38.1.14-1 if selinux-policy-targeted)
@@ -421,6 +424,9 @@ fi
 
 
 %changelog
+* Tue Mar 03 2026 Than Ngo <than@redhat.com> - 3.25.0-4.2
+- Resolves: RHEL-144820, Privilege Escalation or Data Exposure via Symlink Following
+
 * Tue Feb 03 2026 Than Ngo <than@redhat.com> - 3.25.0-4.1
 - Fix unwrapping of attribute bound EC keys
 - Fix private secure key blob import
