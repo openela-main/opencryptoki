@@ -1,7 +1,7 @@
 Name: opencryptoki
 Summary: Implementation of the PKCS#11 (Cryptoki) specification v3.0 and partially v3.1
-Version: 3.25.0
-Release: 5%{?dist}.2
+Version: 3.26.0
+Release: 2%{?dist}
 License: CPL-1.0
 URL: https://github.com/opencryptoki/opencryptoki
 Source0: https://github.com/opencryptoki/%{name}/archive/v%{version}/%{name}-%{version}.tar.gz
@@ -21,25 +21,8 @@ Patch2: opencryptoki-3.24.0-tmpfiles-image-mode.patch
 Patch3: opencryptoki-lockdir-image-mode.patch
 
 # upstream patches
-# Fix detection of EC curve not supported by OpenSSL-3.5.x
-Patch10: opencryptoki-openssl-3.5.x.patch
-
-# Fix covscan findings, https://github.com/opencryptoki/opencryptoki/pull/880
-Patch11: opencryptoki-3.25.0-covscan-findings.patch
-
-# Remove the use of MD5, pkcsslotd crashes in FIPS mode
-Patch12: opencryptoki-3.25.0-reject-using-md5-in-fips-mode.patch
-
-# EP11: Fix unwrapping of attribute bound EC keys
-# https://github.com/ifranzki/opencryptoki/commit/d3dc88c
-Patch13: opencryptoki-3.25.0-fix-unwrapping-attribute-bound-EC-keys.patch
-
-# EP11: Fix private secure key blob import
-# https://github.com/ifranzki/opencryptoki/commit/ab740fd
-Patch14: opencryptoki-3.25.0-fix-private-secure-key-blob-import.patch
-
-# CVE-2026-23893, symlink-following vulnerabilities
-Patch15: opencryptoki-3.25.0-CVE-2026-23893.patch
+# CVE-3-2026-23893
+Patch100: opencryptoki-3.26.0-CVE-3-2026-23893.patch
 
 Requires(pre): coreutils
 Requires: (selinux-policy >= 34.9-1 if selinux-policy-targeted)
@@ -428,13 +411,14 @@ fi
 
 
 %changelog
-* Mon Mar 02 2026 Than Ngo <than@redhat.com> - 3.25.0-5.2
-- Resolves: RHEL-144815, Privilege Escalation or Data Exposure via Symlink Following
+* Fri Feb 13 2026 Than Ngo <than@redhat.com> - 3.26.0-2
+- Resolves: RHEL-144816, CVE-2026-23893
 
-* Mon Feb 02 2026 Than Ngo <than@redhat.com> - 3.25.0-5.1
-- Fix unwrapping of attribute bound EC keys
-- Fix private secure key blob import
-  Resolves: RHEL-131645
+* Wed Dec 17 2025 Than Ngo <than@redhat.com> - 3.26.0-1
+- Resolves: RHEL-75138, ep11 token BLS support
+- Resolves: RHEL-85380, ep11 token: ML-KEM and ML-DSA support
+- Resolves: RHEL-85383, cca token: ML-KEM and ML-DSA support
+- Resolves: RHEL-100058, openCryptoki 3.26.0
 
 * Wed Aug 13 2025 Than Ngo <than@redhat.com> - 3.25.0-5
 - Resolves: RHEL-109017, pkcsslotd fails to start in FIPS mode 
