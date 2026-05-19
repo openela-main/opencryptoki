@@ -1,7 +1,7 @@
 Name: opencryptoki
 Summary: Implementation of the PKCS#11 (Cryptoki) specification v3.0 and partially v3.1
 Version: 3.26.0
-Release: 2%{?dist}
+Release: 3%{?dist}
 License: CPL-1.0
 URL: https://github.com/opencryptoki/opencryptoki
 Source0: https://github.com/opencryptoki/%{name}/archive/v%{version}/%{name}-%{version}.tar.gz
@@ -23,6 +23,7 @@ Patch3: opencryptoki-lockdir-image-mode.patch
 # upstream patches
 # CVE-3-2026-23893
 Patch100: opencryptoki-3.26.0-CVE-3-2026-23893.patch
+Patch101: opencryptoki-3.26.0-Fix-syslog-message-printing-about-different-CPs.patch
 
 Requires(pre): coreutils
 Requires: (selinux-policy >= 34.9-1 if selinux-policy-targeted)
@@ -411,6 +412,9 @@ fi
 
 
 %changelog
+* Mon Apr 27 2026 Than Ngo <than@redhat.com> - 3.26.0-3
+- Resolves: RHEL-169565, Fix syslog message printing about different CPs
+
 * Fri Feb 13 2026 Than Ngo <than@redhat.com> - 3.26.0-2
 - Resolves: RHEL-144816, CVE-2026-23893
 
