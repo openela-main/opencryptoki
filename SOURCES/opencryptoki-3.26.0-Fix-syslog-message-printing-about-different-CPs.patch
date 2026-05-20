@@ -1,0 +1,36 @@
+commit 3a13de065de2e64a53eb6fe14e285318002bd505
+Author: Ingo Franzki <ifranzki@linux.ibm.com>
+Date:   Wed Apr 15 08:50:05 2026 +0200
+
+    EP11: Fix syslog message printing about different CPs
+    
+    Syslog message "Adapter xx.yyyy has different control points than adapter
+    xx.yyyy, using minimum." is erroneously issued even if the control points
+    are the same.
+    
+    The control points of subsequent APQNs are compared against a modified
+    control point bit string, where the unknown CPS have already been turned
+    ON. Comparing this with the queried control point bit string will always
+    show differences, even if the used/known control points are the same.
+    
+    Fix this by remembering the original, unmodified control point bit string
+    instead of the modified one, and compare the control point bit strings of
+    subsequent APQNs with that.
+    
+    Fixes: 97248f73495695436f11fafd74c2ec41a5a6f796
+    
+    Signed-off-by: Ingo Franzki <ifranzki@linux.ibm.com>
+
+diff --git a/usr/lib/ep11_stdll/ep11_specific.c b/usr/lib/ep11_stdll/ep11_specific.c
+index facf6f58..f48946e1 100644
+--- a/usr/lib/ep11_stdll/ep11_specific.c
++++ b/usr/lib/ep11_stdll/ep11_specific.c
+@@ -17900,7 +17900,7 @@ static CK_RV control_point_handler(uint_32 adapter, uint_32 domain,
+             data->combined_cp[CP_BYTE_NO(i)] &=
+                                     (cp[CP_BYTE_NO(i)] | ~CP_BIT_MASK(i));
+         }
+-        memcpy(data->first_cp, data->combined_cp, sizeof(data->first_cp));
++        memcpy(data->first_cp, cp, sizeof(data->first_cp));
+         data->max_cp_index = max_cp_index;
+         data->first = 0;
+     } else {
