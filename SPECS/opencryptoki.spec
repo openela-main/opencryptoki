@@ -1,7 +1,7 @@
 Name: opencryptoki
 Summary: Implementation of the PKCS#11 (Cryptoki) specification v3.0
 Version: 3.22.0
-Release: 3%{?dist}.2
+Release: 3%{?dist}.3
 License: CPL
 Group: System Environment/Base
 URL: https://github.com/opencryptoki/opencryptoki
@@ -25,6 +25,8 @@ Patch24: opencryptoki-CVE-2024-0914-part5.patch
 Patch25: 3.22-CCA-Adjust-CCA-host-library-version-detection-for-ne.patch
 # CVE-3-2026-23893, symlink-following vulnerabilities
 Patch26: opencryptoki-3.20.0-CVE-3-2026-23893.patch
+# CVE-2026-40253, possible out-of-bounds access in BER decode functions
+Patch27: opencryptoki-3.20.0-CVE-2026-40253.patch
 
 Requires(pre): coreutils diffutils
 Requires: (selinux-policy >= 3.14.3-121 if selinux-policy-targeted)
@@ -385,6 +387,9 @@ fi
 
 
 %changelog
+* Tue May 19 2026 Than Ngo <than@redhat.com> - 3.22.0-3.3
+- Resolves: RHEL-171558, Fix possible out-of-bounds access in BER decode functions
+
 * Mon Mar 02 2026 Than Ngo <than@redhat.com> - 3.22.0-3.2
 - Resolves: RHEL-144817, CVE-2026-23893 Privilege Escalation or Data Exposure via Symlink Following
 
