@@ -1,7 +1,7 @@
 Name: opencryptoki
 Summary: Implementation of the PKCS#11 (Cryptoki) specification v3.0 and partially v3.1
-Version: 3.26.0
-Release: 3%{?dist}.1
+Version: 3.27.0
+Release: 1%{?dist}
 License: CPL-1.0
 URL: https://github.com/opencryptoki/opencryptoki
 Source0: https://github.com/opencryptoki/%{name}/archive/v%{version}/%{name}-%{version}.tar.gz
@@ -11,7 +11,7 @@ Source1: opencryptoki.module
 Source2: opencryptoki.sysusers.conf
 
 # fix install problem in buildroot
-Patch1: opencryptoki-3.25.0-p11sak.patch
+Patch1: opencryptoki-3.25.0-buildroot-install.patch
 
 # tmpfiles.d config files for image mode
 Patch2: opencryptoki-3.24.0-tmpfiles-image-mode.patch
@@ -21,12 +21,6 @@ Patch2: opencryptoki-3.24.0-tmpfiles-image-mode.patch
 Patch3: opencryptoki-lockdir-image-mode.patch
 
 # upstream patches
-# Fix CVE-3-2026-23893
-Patch100: opencryptoki-3.26.0-CVE-3-2026-23893.patch
-Patch101: opencryptoki-3.26.0-Fix-syslog-message-printing-about-different-CPs.patch
-# Fix CVE-2026-40253
-Patch102: opencryptoki-v3.26.0-CVE-2026-40253-part1.patch
-Patch103: opencryptoki-v3.26.0-CVE-2026-40253-part2.patch
 
 Requires(pre): coreutils
 Requires: (selinux-policy >= 34.9-1 if selinux-policy-targeted)
@@ -64,7 +58,7 @@ Requires(postun): systemd
 
 
 %description
-Opencryptoki implements the PKCS#11 specification  v3.0 and partially v3.1
+Opencryptoki implements the PKCS#11 specification  v3.0 and partially v3.1, v3.2
 for a set of cryptographic hardware, such as IBM 4767, 4768, 4769 and 4770
 crypto cards, and the Trusted Platform Module (TPM) chip. Opencryptoki also
 brings a software token implementation that can be used without any cryptographic
@@ -77,7 +71,7 @@ Summary: The run-time libraries for opencryptoki package
 Requires(pre): shadow-utils
 
 %description libs
-Opencryptoki implements the PKCS#11 specification  v3.0 and partially v3.1
+Opencryptoki implements the PKCS#11 specification  v3.0 and partially v3.1, v3.2
 for a set of cryptographic hardware, such as IBM 4767, 4768, 4769 and 4770
 crypto cards, and the Trusted Platform Module (TPM) chip. Opencryptoki also
 brings a software token implementation that can be used without any cryptographic
@@ -103,7 +97,7 @@ Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 Provides: %{name}(token)
 
 %description swtok
-Opencryptoki implements the PKCS#11 specification  v3.0 and partially v3.1
+Opencryptoki implements the PKCS#11 specification  v3.0 and partially v3.1, v3.2
 for a set of cryptographic hardware, such as IBM 4767, 4768, 4769 and 4770
 crypto cards, and the Trusted Platform Module (TPM) chip. Opencryptoki also
 brings a software token implementation that can be used without any cryptographic
@@ -119,7 +113,7 @@ Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 Provides: %{name}(token)
 
 %description tpmtok
-Opencryptoki implements the PKCS#11 specification  v3.0 and partially v3.1
+Opencryptoki implements the PKCS#11 specification  v3.0 and partially v3.1, v3.2
 for a set of cryptographic hardware, such as IBM 4767, 4768, 4769 and 4770
 crypto cards, and the Trusted Platform Module (TPM) chip. Opencryptoki also
 brings a software token implementation that can be used without any cryptographic
@@ -135,7 +129,7 @@ Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 Provides: %{name}(token)
 
 %description icsftok
-Opencryptoki implements the PKCS#11 specification  v3.0 and partially v3.1
+Opencryptoki implements the PKCS#11 specification  v3.0 and partially v3.1, v3.2
 for a set of cryptographic hardware, such as IBM 4767, 4768, 4769 and 4770
 crypto cards, and the Trusted Platform Module (TPM) chip. Opencryptoki also
 brings a software token implementation that can be used without any cryptographic
@@ -151,7 +145,7 @@ Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 Provides: %{name}(token)
 
 %description icatok
-Opencryptoki implements the PKCS#11 specification  v3.0 and partially v3.1
+Opencryptoki implements the PKCS#11 specification  v3.0 and partially v3.1, v3.2
 for a set of cryptographic hardware, such as IBM 4767, 4768, 4769 and 4770
 crypto cards, and the Trusted Platform Module (TPM) chip. Opencryptoki also
 brings a software token implementation that can be used without any cryptographic
@@ -168,7 +162,7 @@ Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 Provides: %{name}(token)
 
 %description ccatok
-Opencryptoki implements the PKCS#11 specification  v3.0 and partially v3.1
+Opencryptoki implements the PKCS#11 specification  v3.0 and partially v3.1, v3.2
 for a set of cryptographic hardware, such as IBM 4767, 4768, 4769 and 4770
 crypto cards, and the Trusted Platform Module (TPM) chip. Opencryptoki also
 brings a software token implementation that can be used without any cryptographic
@@ -185,7 +179,7 @@ Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 Provides: %{name}(token)
 
 %description ep11tok
-Opencryptoki implements the PKCS#11 specification  v3.0 and partially v3.1
+Opencryptoki implements the PKCS#11 specification  v3.0 and partially v3.1, v3.2
 for a set of cryptographic hardware, such as IBM 4767, 4768, 4769 and 4770
 crypto cards, and the Trusted Platform Module (TPM) chip. Opencryptoki also
 brings a software token implementation that can be used without any cryptographic
@@ -415,11 +409,13 @@ fi
 
 
 %changelog
-* Tue May 26 2026 Than Ngo <than@redhat.com> - 3.26.0-3.1
-- Resolves: RHEL-171556, Fix possible out-of-bounds access in BER decode functions 
-
-* Mon Apr 27 2026 Than Ngo <than@redhat.com> - 3.26.0-3
-- Resolves: RHEL-169565, Fix syslog message printing about different CPs
+* Tue Jul 21 2026 Than Ngo <than@redhat.com> - 3.27.0-1
+- Resolves: RHEL-171557, Fix CVE-2026-40253
+- Resolves: RHEL-169193, Fix syslog warning even for identically configured control points
+- Resolves: RHEL-157535, openCryptoki soft token: support PKCS #11 V3.2 ML-DSA and ML-KEM
+- Resolves: RHEL-157678, openCryptoki CCA token: support PKCS #11 V3.2 ML-DSA
+- Resolves: RHEL-157805, openCryptoki EP11 token: support PKCS #11 V3.2 ML-DSA and ML-KEM
+- Resolves: RHEL-136094, Update to 3.27.0
 
 * Fri Feb 13 2026 Than Ngo <than@redhat.com> - 3.26.0-2
 - Resolves: RHEL-144816, CVE-2026-23893
