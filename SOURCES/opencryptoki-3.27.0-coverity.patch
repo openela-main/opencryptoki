@@ -1,0 +1,24 @@
+TESTCASES: Fix Coverity finding: Using uninitialized value
+
+1. Defect type: UNINIT
+1. opencryptoki-3.27.0/testcases/crypto/rsa_func.c:2367:5: var_decl: Declaring variable "oaep_params" without initializer.
+48. opencryptoki-3.27.0/testcases/crypto/rsa_func.c:2648:13: uninit_use: Using uninitialized value "oaep_params.hashAlg".
+49. opencryptoki-3.27.0/testcases/crypto/rsa_func.c:2648:13: uninit_use: Using uninitialized value "oaep_params.mgf".
+#  2646|                                           NULL, &cipher_len, NULL);
+#  2647|           if (rc != CKR_OK) {
+#  2648|->             if (rc == CKR_MECHANISM_PARAM_INVALID &&
+#  2649|                   encaps_mech.mechanism == CKM_RSA_PKCS_OAEP &&
+#  2650|                   is_ep11_token(slot_id) &&
+
+diff -up opencryptoki-3.27.0/testcases/crypto/rsa_func.c.orig opencryptoki-3.27.0/testcases/crypto/rsa_func.c
+--- opencryptoki-3.27.0/testcases/crypto/rsa_func.c.orig	2026-07-22 14:10:57.771848322 +0200
++++ opencryptoki-3.27.0/testcases/crypto/rsa_func.c	2026-07-22 16:00:07.212999532 +0200
+@@ -2364,7 +2364,7 @@ CK_RV do_EncapsDecapsRSA(struct GENERATE
+     CK_BYTE_PTR cipher = NULL;
+     CK_ULONG cipher_len;
+     CK_MECHANISM encaps_mech, mech;
+-    CK_RSA_PKCS_OAEP_PARAMS oaep_params;
++    CK_RSA_PKCS_OAEP_PARAMS oaep_params = {0};
+     CK_BYTE clear[32], encypted[32], re_cipher[32];
+     CK_ULONG encrypted_len = 32, re_cipher_len = 32;
+ 
